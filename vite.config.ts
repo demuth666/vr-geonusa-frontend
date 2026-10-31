@@ -13,6 +13,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    setupFiles: ['./src/test/setup.ts'],
   },
   server: {
     port: 5173,
@@ -21,6 +22,10 @@ export default defineConfig({
       // Saat VITE_API_MODE=mock (default), proxy ini tidak terpakai sama
       // sekali karena fetch tidak pernah keluar — lihat src/api/client.ts.
       '/api/v1': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/sanctum': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

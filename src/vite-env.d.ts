@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_MODE?: 'mock' | 'real';
   readonly VITE_API_BASE_URL?: string;
+  readonly VITE_SANCTUM_CSRF?: 'true' | 'false';
 }
 
 interface ImportMeta {

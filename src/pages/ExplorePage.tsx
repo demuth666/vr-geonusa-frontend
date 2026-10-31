@@ -12,6 +12,7 @@ import { useUiStore } from '@/store/uiStore';
 import { sessionPhaseToPath } from '@/utils/session-routing';
 import { captureViewport } from '@/vr/ml/capture';
 import PanoramaScene from '@/vr/panorama/PanoramaScene';
+import { usePreloadNeighborPanoramas } from '@/vr/panorama/preload';
 import ProgressBar from '@/features/progress/ProgressBar';
 import IdentifyButton from '@/features/ml-identification/IdentifyButton';
 import IdentifyingOverlay from '@/features/ml-identification/IdentifyingOverlay';
@@ -61,6 +62,7 @@ function ExploreContent({ session }: { session: LearningSession }) {
   }, [areasQuery.data, currentNodeId]);
 
   const nodeQuery = usePanoramaNode(currentNodeId);
+  usePreloadNeighborPanoramas(nodeQuery.data);
 
   const handleSceneRef = useCallback((sceneEl: any, cameraEl: any) => {
     sceneRef.current = sceneEl;

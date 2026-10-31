@@ -38,7 +38,16 @@ Untuk konek ke backend sungguhan:
 # di .env.local
 VITE_API_MODE=real
 VITE_API_BASE_URL=http://localhost:8000   # sesuaikan
+VITE_SANCTUM_CSRF=true                     # hanya jika backend pakai Laravel Sanctum SPA
 ```
+
+Catatan mode real:
+
+- Auth via cookie (`credentials: 'include'`). Bila cookie `XSRF-TOKEN` ada,
+  header `X-XSRF-TOKEN` otomatis dikirim pada request non-GET.
+- Respons Laravel `{ "data": ... }` di-unwrap otomatis (`{ "data": null }` → `null`).
+- Konfirmasi ke backend: Sanctum atau bukan, domain cookie/CORS, dan skala
+  `confidence` ML (0–1 atau 0–100).
 
 ## Struktur Proyek
 
@@ -111,14 +120,19 @@ kontrak asli:
   memuat A-Frame, ~1.3MB) sengaja dipisah jadi chunk sendiri via
   `React.lazy` di `app/router/index.tsx`, supaya landing/login/pretest tidak
   ikut menanggung bundle itu.
-- ✅ `npx eslint . --ext ts,tsx` — 0 error, 1 warning kosmetik (fast-refresh,
-  tidak mempengaruhi fungsi).
-- ✅ `npx vitest run` — 3/3 test lulus:
-  - `utils/session-routing.test.ts` — pemetaan phase → path.
-  - `api/mock/learning-session.test.ts` — alur progress end-to-end
-    (kunjungan panorama → materi dilihat → micro quiz selesai → `can_finish`
-    jadi `true` → `completeExploration` sukses; dan `completeExploration`
-    ditolak 409 selama syarat belum lengkap).
+- ✅ `npx eslint . --ext ts,tsx` — 0 error, 0 warning.
+- ✅ `npx vitest run` — 21 test lulus:
+  - `test/critical-flows.test.tsx` — 12 test kritis PRD #55 (redirect login,
+    kembali ke tujuan setelah login, resume session, routing ikut phase,
+    pretest/posttest tanpa koreksi, navigasi panorama dari API, ML
+    no-detection, ML 503 tidak crash, micro quiz pakai correctness server,
+    tombol selesai ikut `can_finish`, halaman result) + hasil prediksi ML.
+    Render route asli dengan mock API; A-Frame diganti stub (jsdom tanpa WebGL).
+  - `api/contract.test.ts` — setiap `http()` di `src/features/*/api.ts`
+    ada di `contracts/openapi.yaml`.
+  - `api/client.test.ts` — unwrap envelope `{ data }`.
+  - `vr/panorama/preload.test.ts` — preload hanya node tetangga, release sisanya.
+  - `utils/session-routing.test.ts`, `api/mock/learning-session.test.ts`.
 
 ## Yang BELUM diverifikasi
 

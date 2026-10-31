@@ -21,6 +21,9 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/aframe": "^1.2.9",
     "@types/node": "^26.6.5",
     "@types/react": "^18.3.12",

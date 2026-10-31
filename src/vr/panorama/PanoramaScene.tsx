@@ -23,6 +23,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
   const sceneRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const skyRef = useRef<any>(null);
   // Simpan id node yang texture-nya SUDAH termuat, bukan boolean. Dengan
   // begitu status "loaded" otomatis false begitu node berganti (dihitung saat
   // render, tanpa effect reset yang bisa kalah balapan dengan event texture).
@@ -51,6 +52,19 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
   useEffect(() => {
     const timer = setTimeout(() => setLoadedNodeId(node.id), 15000);
     return () => clearTimeout(timer);
+  }, [node.id]);
+
+  // PRD #50: lepas texture panorama lama saat pindah node / unmount. Scene
+  // di-remount (key), renderer di-dispose A-Frame, tapi texture sky tetap
+  // di-dispose eksplisit supaya memori GPU tidak menumpuk.
+  useEffect(() => {
+    const sky = skyRef.current;
+    return () => {
+      const mesh = sky?.getObject3D?.('mesh');
+      const material = mesh?.material;
+      material?.map?.dispose?.();
+      material?.dispose?.();
+    };
   }, [node.id]);
 
   useEffect(() => {
@@ -88,7 +102,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
         loading-screen="enabled: false"
         style={{ width: '100%', height: '100%' }}
       >
-        <a-sky data-node-id={node.id} src={node.image_url} rotation="0 -90 0" />
+        <a-sky ref={skyRef} data-node-id={node.id} src={node.image_url} rotation="0 -90 0" />
         <a-camera
           ref={cameraRef}
           rotation={`${node.initial_pitch} ${node.initial_yaw} 0`}

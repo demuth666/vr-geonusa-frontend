@@ -1,8 +1,8 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import RootLayout from '@/app/layouts/RootLayout';
 import ProtectedRoute from '@/features/auth/ProtectedRoute';
-import Spinner from '@/components/Spinner';
+import ExplorePageFallback from '@/components/ExplorePageFallback';
 
 import LandingPage from '@/pages/LandingPage';
 import DestinationsPage from '@/pages/DestinationsPage';
@@ -22,14 +22,6 @@ import NotFoundPage from '@/pages/NotFoundPage';
 // menanggung bundle itu di initial load.
 const ExplorePage = lazy(() => import('@/pages/ExplorePage'));
 
-function ExplorePageFallback() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-slate-900">
-      <Spinner label="Memuat pengalaman VR..." />
-    </div>
-  );
-}
-
 /**
  * Struktur route mengikuti PRD #12-#19:
  * - Publik: landing, daftar destinasi, detail Borobudur, login.
@@ -37,7 +29,7 @@ function ExplorePageFallback() {
  *   exploration -> posttest -> self-efficacy -> result), dijaga
  *   ProtectedRoute (auth) dan SessionPhaseGuard per-halaman (phase).
  */
-export const router = createBrowserRouter([
+export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
     children: [
@@ -70,4 +62,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <NotFoundPage /> },
     ],
   },
-]);
+];
+
+export const router = createBrowserRouter(routes);

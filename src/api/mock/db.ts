@@ -30,6 +30,17 @@ const assessmentAttempts = new Map<string, AssessmentAttempt & { answers: Record
 const panoramaVisits = new Map<string, Set<string>>(); // sessionId -> visited node ids
 const materialsViewed = new Map<string, Set<string>>(); // sessionId -> viewed object ids
 const microQuizCompleted = new Map<string, boolean>(); // sessionId -> completed
+const quizAttemptSession = new Map<string, string>(); // attemptId -> sessionId
+const assessmentAttemptSession = new Map<string, string>(); // attemptId -> sessionId
+
+/** Hanya untuk test: kosongkan seluruh state mock in-memory. */
+export function resetMockDb(): void {
+  mockAuthed = false;
+  nextSessionSeq = 1;
+  for (const m of [sessions, quizAttempts, assessmentAttempts, panoramaVisits, materialsViewed, microQuizCompleted, quizAttemptSession, assessmentAttemptSession]) {
+    m.clear();
+  }
+}
 
 export function isMockAuthed(): boolean {
   return mockAuthed;
@@ -110,8 +121,6 @@ export function isMicroQuizCompleted(sessionId: string): boolean {
   return microQuizCompleted.get(sessionId) ?? false;
 }
 
-const quizAttemptSession = new Map<string, string>(); // attemptId -> sessionId
-const assessmentAttemptSession = new Map<string, string>(); // attemptId -> sessionId
 
 export function createQuizAttempt(quizId: string, sessionId: string): QuizAttempt {
   const id = `qa-${Date.now()}-${Math.round(Math.random() * 1e4)}`;
