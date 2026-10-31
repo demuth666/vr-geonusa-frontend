@@ -265,3 +265,63 @@
 .vr-primary-btn.mt { margin-top: 14px; }
 #quiz-overlay label.quiz-option { display: flex; align-items: center; gap: 10px; }
 #quiz-overlay label.quiz-option input { accent-color: #10B981; flex-shrink: 0; }
+
+/* Label panel kuis — samakan dengan #info-overlay .panel-label */
+#quiz-overlay .panel-label {
+  color: #10B981; font-size: 9px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase;
+}
+
+/* ── Menu nav mobile (LFS menyembunyikan link < 768px tanpa pengganti) ── */
+.nav-menu-btn {
+  display: none; width: 42px; height: 42px; margin-left: 8px; border-radius: var(--r-sm);
+  background: var(--bg-2); border: 2px solid var(--card-border); color: var(--text-2);
+  align-items: center; justify-content: center;
+}
+.nav-menu-btn svg { width: 20px; height: 20px; }
+.nav-mobile {
+  position: fixed; top: 68px; left: 0; right: 0; z-index: 199;
+  background: rgba(255,253,249,0.98); border-bottom: 2px solid var(--card-border);
+  box-shadow: 0 12px 24px -8px rgba(15,23,42,.12);
+  padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 2px;
+}
+.nav-mobile a {
+  font-size: 15px; font-weight: 800; color: var(--text-2);
+  padding: 12px 14px; border-radius: var(--r-sm);
+}
+.nav-mobile a:hover, .nav-mobile a:focus-visible { background: var(--green-soft); color: var(--green-dark); }
+
+@media (max-width: 768px) {
+  .nav-menu-btn { display: inline-flex; }
+}
+@media (min-width: 769px) {
+  .nav-mobile { display: none; }
+}
+
+/* ── Rapikan grid di HP kecil ── */
+@media (max-width: 540px) {
+  .nav { padding: 0 16px; }
+  .nav-admin { padding: 8px 12px; }
+  .hero { padding-top: 100px; gap: 24px; min-height: auto; }
+  .hero-btns { width: 100%; }
+  .hero-btns .btn { flex: 1 1 100%; }
+  .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .hero-stat { flex-direction: column; text-align: center; gap: 6px; padding: 12px 6px; }
+  .researcher-grid { grid-template-columns: 1fr; }
+  .team-card.researcher .tc-photo { height: 260px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .step-card { display: grid; grid-template-columns: 64px 1fr; gap: 4px 16px; text-align: left; padding: 20px; }
+  .step-card .step-num { display: none; }
+  .step-card .step-ico { grid-row: 1 / 3; width: 64px; height: 64px; margin: 0; }
+  .step-card .step-ico svg { width: 30px; height: 30px; }
+  .step-card .step-title { align-self: end; margin-bottom: 0; }
+  .geo-grid { gap: 10px; }
+  .geo-card { padding: 18px 10px; }
+  .geo-svg-wrap { width: 72px; height: 72px; }
+  .geo-svg-wrap svg { width: 58px; height: 58px; }
+  .geo-formula { font-size: .7rem; padding: 4px 8px; }
+  .bento { grid-template-rows: 420px 240px 240px; }
+  .section-head { margin-bottom: 32px; }
+  .assess-wrap { padding-top: 28px; }
+  .assess-nav .btn { flex: 1; }
+  .detail-meta .hero-stat { flex: 1; }
+}

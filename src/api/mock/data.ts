@@ -66,11 +66,19 @@ export const MOCK_HERITAGE_SITES: HeritageSite[] = [
   },
 ];
 
+/**
+ * Dataset dev V1 (PRD #51: 3 panorama node). Foto 360° asli dari dokumentasi
+ * tim (RICOH THETA V, 2018 — VR-GeoNusa LFS data/tour-borobudur.json):
+ *   node-1 = teras-3-04, node-2 = plateu-00, node-3 = plateu-01.
+ * Hotspot "Maju" (yaw 0) / "Mundur" (yaw 180) mengikuti `connections` LFS;
+ * pitch -6° ≈ tinggi hotspot LFS (1.2 m) dilihat dari mata (1.6 m) pada jarak 4 m.
+ * Ini HANYA data mock — di mode real semuanya datang dari backend (PRD #25).
+ */
 export const MOCK_AREAS: HeritageArea[] = [
   {
-    id: 'area-borobudur-utama',
+    id: 'area-borobudur-arupadhatu',
     heritage_site_id: 'site-borobudur',
-    name: 'Teras Utama',
+    name: 'Teras Arupadhatu & Stupa Induk',
     panorama_node_ids: ['node-1', 'node-2', 'node-3'],
   },
 ];
@@ -79,36 +87,32 @@ export const MOCK_PANORAMA_NODES: Record<string, PanoramaNode> = {
   'node-1': {
     id: 'node-1',
     heritage_site_id: 'site-borobudur',
-    name: 'Teras Bawah',
-    image_url: '/panorama/node-1.jpg',
+    name: 'Teras Arupadhatu 3',
+    image_url: '/panorama/teras-3-04.jpg',
     initial_yaw: 0,
     initial_pitch: 0,
-    hotspots: [
-      { id: 'hs-1-2', target_node_id: 'node-2', yaw: 60, pitch: 0, label: 'Menuju Teras Tengah' },
-    ],
+    hotspots: [{ id: 'hs-1-2', target_node_id: 'node-2', yaw: 0, pitch: -6, label: 'Maju' }],
   },
   'node-2': {
     id: 'node-2',
     heritage_site_id: 'site-borobudur',
-    name: 'Teras Tengah — Deretan Stupa',
-    image_url: '/panorama/node-2.jpg',
+    name: 'Plateu Stupa Induk',
+    image_url: '/panorama/plateu-00.jpg',
     initial_yaw: 0,
     initial_pitch: 0,
     hotspots: [
-      { id: 'hs-2-1', target_node_id: 'node-1', yaw: -120, pitch: 0, label: 'Kembali ke Teras Bawah' },
-      { id: 'hs-2-3', target_node_id: 'node-3', yaw: 90, pitch: 0, label: 'Menuju Teras Atas' },
+      { id: 'hs-2-3', target_node_id: 'node-3', yaw: 0, pitch: -6, label: 'Maju' },
+      { id: 'hs-2-1', target_node_id: 'node-1', yaw: 180, pitch: -6, label: 'Mundur' },
     ],
   },
   'node-3': {
     id: 'node-3',
     heritage_site_id: 'site-borobudur',
-    name: 'Teras Atas — Stupa Induk',
-    image_url: '/panorama/node-3.jpg',
+    name: 'Plateu Stupa Induk — Sisi Dekat',
+    image_url: '/panorama/plateu-01.jpg',
     initial_yaw: 0,
     initial_pitch: 0,
-    hotspots: [
-      { id: 'hs-3-2', target_node_id: 'node-2', yaw: -90, pitch: 0, label: 'Kembali ke Teras Tengah' },
-    ],
+    hotspots: [{ id: 'hs-3-2', target_node_id: 'node-2', yaw: 180, pitch: -6, label: 'Mundur' }],
   },
 };
 

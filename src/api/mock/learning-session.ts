@@ -77,7 +77,7 @@ export async function predictGeometry(
   getMockSession(sessionId);
   await delay(900); // inferensi ML lebih lambat dari request biasa
 
-  // Mock heuristik sederhana: node-2 & node-3 "mengandung" stupa, node-1 kosong,
+  // Mock heuristik sederhana: node-2 & node-3 (plateu) mengembalikan stupa, node-1 kosong,
   // supaya alur "No Detection" (PRD #31) juga bisa dicoba dari node-1.
   if (panoramaNodeId === 'node-1') {
     return { detections: [] };

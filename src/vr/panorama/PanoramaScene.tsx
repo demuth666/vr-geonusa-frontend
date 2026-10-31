@@ -105,7 +105,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
         loading-screen="enabled: false"
         style={{ width: '100%', height: '100%' }}
       >
-        <a-sky ref={skyRef} data-node-id={node.id} src={node.image_url} rotation="0 -90 0" />
+        <a-sky ref={skyRef} data-node-id={node.id} src={node.image_url} rotation="0 0 0" />
         <a-camera
           ref={cameraRef}
           rotation={`${node.initial_pitch} ${node.initial_yaw} 0`}

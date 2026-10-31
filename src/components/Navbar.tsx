@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CompassIcon, UserIcon } from './icons';
 import { useMe } from '@/features/auth/hooks';
 
@@ -11,6 +11,11 @@ import { useMe } from '@/features/auth/hooks';
  */
 export default function Navbar() {
   const [solid, setSolid] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Tutup menu mobile setiap pindah halaman/anchor.
+  useEffect(() => setMenuOpen(false), [location.pathname, location.hash]);
   const { data: me } = useMe();
 
   useEffect(() => {
@@ -47,6 +52,30 @@ export default function Navbar() {
           <UserIcon />
           Masuk
         </Link>
+      )}
+      <button
+        type="button"
+        className="nav-menu-btn"
+        aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+        aria-expanded={menuOpen}
+        aria-controls="nav-mobile"
+        onClick={() => setMenuOpen((v) => !v)}
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          {menuOpen ? (
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          ) : (
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+          )}
+        </svg>
+      </button>
+      {menuOpen && (
+        <nav id="nav-mobile" className="nav-mobile" aria-label="Navigasi utama (mobile)">
+          <Link to="/#destinasi">Destinasi</Link>
+          <Link to="/#cara-main">Cara Main</Link>
+          <Link to="/#geometri">Bangun Ruang</Link>
+          <Link to="/team">Tim</Link>
+        </nav>
       )}
     </header>
   );

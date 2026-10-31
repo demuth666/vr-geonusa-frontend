@@ -105,7 +105,7 @@ describe('PRD #55 critical frontend tests', () => {
     const panorama = await screen.findByTestId('panorama');
     expect(panorama.getAttribute('data-node-id')).toBe('node-1');
     // Label & target hotspot berasal dari GET /panorama-nodes/node-1.
-    await user.click(screen.getByRole('button', { name: 'Menuju Teras Tengah' }));
+    await user.click(screen.getByRole('button', { name: 'Maju' }));
     await waitFor(() =>
       expect(screen.getByTestId('panorama').getAttribute('data-node-id')).toBe('node-2')
     );
@@ -113,6 +113,7 @@ describe('PRD #55 critical frontend tests', () => {
     await waitFor(() => expect(getMockSession(s.id).current_panorama_node_id).toBe('node-2'));
     // Posisi hotspot dihitung dari yaw/pitch API, bukan hardcode.
     expect(hotspotPosition(90, 0)).toBe('4.50 0.00 -0.00');
+    expect(hotspotPosition(0, 0)).toBe('0.00 0.00 -4.50');
   });
 
   it('7. ML no-detection state is handled', async () => {
