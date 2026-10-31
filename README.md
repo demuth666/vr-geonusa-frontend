@@ -5,6 +5,10 @@ di Candi Borobudur, sesuai PRD V1. **Repo ini HANYA berisi frontend** —
 backend Laravel, service ML (FastAPI), dan admin panel ada di repo terpisah
 milik tim masing-masing.
 
+> **Status integrasi:** frontend V1 selesai dan berjalan di atas mock. Menunggu
+> OpenAPI resmi dari tim backend — daftar kebutuhannya ada di
+> [`docs/backend-api-requests.md`](docs/backend-api-requests.md).
+
 ## Mengapa cuma frontend yang di-push ke sini
 
 PRD menyebutkan tiga repo terpisah: Laravel (backend), FastAPI (ML), dan
@@ -17,6 +21,20 @@ pertama kalau folder ini sebelumnya pernah dipakai bareng project lain.
 
 React 18 + TypeScript + Vite + Tailwind CSS + TanStack Query + Zustand +
 A-Frame (WebXR panorama). Lihat `package.json`.
+
+## Desain visual
+
+Tampilan mengikuti aplikasi lama **VR-GeoNusa LFS** (gaya *claymorphism*, font
+Nunito + Baloo 2):
+
+- `src/styles/kids.css` — salinan `public/css/kids.css` LFS (landing, kartu, tombol).
+- `src/styles/vr.css` — salinan `public/css/ui.css` LFS (HUD tur 360°, splash), tanpa
+  aturan `body { overflow: hidden }` global.
+- `src/styles/app.css` — tambahan untuk layar alur PRD yang tidak ada di LFS
+  (assessment, result, detail), menu mobile, dan penyesuaian responsif.
+
+Admin Panel, mode Tamu, dan Mode Dataset dari LFS sengaja tidak dibawa karena di
+luar scope frontend siswa (PRD §6).
 
 ## Menjalankan secara lokal
 
@@ -31,6 +49,13 @@ Buka `http://localhost:5173`. Dengan `VITE_API_MODE=mock` (default),
 in-memory di `src/api/mock/` yang meniru endpoint Laravel sesuai
 `contracts/openapi.yaml`. Login bisa pakai identifier/password apa saja yang
 tidak kosong.
+
+Dataset dev mock (PRD §51): 1 destinasi aktif (Borobudur) + Prambanan
+"Segera Hadir", 1 area, **3 panorama asli** dari dokumentasi tim (RICOH THETA V,
+2018 — `public/panorama/teras-3-04.jpg`, `plateu-00.jpg`, `plateu-01.jpg`),
+1 objek (stupa), 1 materi, 1 micro quiz, pretest/posttest/self-efficacy.
+Di mode mock, identifikasi di node pertama sengaja mengembalikan "belum ada
+objek" untuk menguji state itu; node 2–3 mengembalikan STUPA.
 
 Untuk konek ke backend sungguhan:
 
@@ -86,8 +111,14 @@ src/
   landing page.
 - **Token tulis sesi (`X-Learning-Session-Token`)** disimpan HANYA di memory
   (`api/session-token.ts`) — tidak pernah di localStorage/URL/log. Hilang
-  saat refresh secara sengaja; halaman intro akan mengambil ulang lewat
-  `GET /me/learning-sessions/active`.
+  saat refresh secara sengaja; `SessionPhaseGuard` mengambil ulang lewat
+  `GET /me/learning-sessions/active` sebelum halaman sesi melakukan mutasi.
+- **401 di tengah sesi** (`features/auth/AuthExpiryWatcher.tsx`) membuang
+  status auth + token dan mengarahkan ke `/login` dengan tujuan semula.
+- **Panorama data-driven:** posisi hotspot dihitung dari `yaw`/`pitch` API.
+  Selain ring di dalam scene, hotspot juga tersedia sebagai tombol HTML di
+  panel "Area Saat Ini" (padanan keyboard/non-VR, PRD §49). Hanya node
+  tetangga yang di-preload; texture lama dilepas (PRD §50).
 - **Frontend tidak pernah memanggil FastAPI ML langsung** — selalu lewat
   endpoint Laravel `POST /learning-sessions/:id/ml-predictions`
   (`features/learning-session/api.ts`).
@@ -106,6 +137,8 @@ diturunkan dari bentuk payload yang dideskripsikan di PRD — backend belum
 membagikan OpenAPI resminya saat V1 ini dikerjakan. Begitu backend merilis
 kontrak asli:
 
+Daftar pertanyaan & kebutuhan untuk backend: [`docs/backend-api-requests.md`](docs/backend-api-requests.md).
+
 1. Ganti `contracts/openapi.yaml` dengan versi resmi.
 2. Cocokkan ulang `src/types/api.ts` terhadap skema resmi.
 3. Set `VITE_API_MODE=real` dan uji tiap endpoint satu per satu terhadap
@@ -115,36 +148,28 @@ kontrak asli:
 
 ## Testing yang sudah benar-benar dijalankan
 
-- ✅ `npx tsc --noEmit` — 0 error.
-- ✅ `npm run build` (tsc -b && vite build) — sukses. `ExplorePage` (yang
-  memuat A-Frame, ~1.3MB) sengaja dipisah jadi chunk sendiri via
-  `React.lazy` di `app/router/index.tsx`, supaya landing/login/pretest tidak
-  ikut menanggung bundle itu.
-- ✅ `npx eslint . --ext ts,tsx` — 0 error, 0 warning.
-- ✅ `npx vitest run` — 21 test lulus:
-  - `test/critical-flows.test.tsx` — 12 test kritis PRD #55 (redirect login,
-    kembali ke tujuan setelah login, resume session, routing ikut phase,
-    pretest/posttest tanpa koreksi, navigasi panorama dari API, ML
-    no-detection, ML 503 tidak crash, micro quiz pakai correctness server,
-    tombol selesai ikut `can_finish`, halaman result) + hasil prediksi ML.
-    Render route asli dengan mock API; A-Frame diganti stub (jsdom tanpa WebGL).
-  - `api/contract.test.ts` — setiap `http()` di `src/features/*/api.ts`
-    ada di `contracts/openapi.yaml`.
+- ✅ `npm run typecheck` — 0 error.
+- ✅ `npm run lint` — 0 error, 0 warning.
+- ✅ `npm run build` — sukses. `ExplorePage` (memuat A-Frame, ~1.3MB) dipisah
+  jadi chunk sendiri via `React.lazy`, supaya landing/login/pretest ringan.
+- ✅ `npm test` — 24 test lulus:
+  - `test/critical-flows.test.tsx` — 12 test kritis PRD §55 + hasil prediksi
+    ML, pemulihan write token setelah refresh, 401 → login, dan navigasi
+    hotspot lewat keyboard. Render route asli dengan mock API; A-Frame diganti
+    stub (jsdom tanpa WebGL).
+  - `api/contract.test.ts` — setiap `http()` di `src/features/*/api.ts` ada di
+    `contracts/openapi.yaml`.
   - `api/client.test.ts` — unwrap envelope `{ data }`.
-  - `vr/panorama/preload.test.ts` — preload hanya node tetangga, release sisanya.
+  - `vr/panorama/preload.test.ts` — preload hanya node tetangga.
   - `utils/session-routing.test.ts`, `api/mock/learning-session.test.ts`.
+- ✅ Dicek manual di Chrome (desktop 1440px dan simulasi HP 390px / 360px):
+  landing, detail, tim, login, intro, pretest, eksplorasi (panorama asli,
+  hotspot, identifikasi, materi, micro quiz).
 
 ## Yang BELUM diverifikasi
 
-- **Belum pernah dibuka di browser sungguhan / di headset VR.** Tidak ada
-  bukti screenshot interaksi WebXR nyata — hanya build & unit test yang
-  lulus. Jalankan `npm run dev` dan coba sendiri alur
-  login → intro → pretest → explore (panorama + identifikasi + materi +
-  kuis) → selesai eksplorasi → posttest → self-efficacy → result.
-- **Belum pernah terhubung ke backend Laravel/ML sungguhan** — hanya diuji
-  lewat mock. `contracts/openapi.yaml` adalah tebakan terstruktur dari PRD,
-  BUKAN kontrak resmi — kemungkinan ada field/endpoint yang perlu disesuaikan
-  begitu backend sungguhan tersedia.
-- **Belum ada pengujian WebXR/headset VR nyata** (mode VR A-Frame, kontrol
-  trigger, dst) — hanya jalur non-VR (mouse/tap) yang ditulis & diuji logic-nya.
-- **Kompatibilitas lintas-browser (Safari iOS, dst)** belum dicoba.
+- **Belum terhubung ke backend Laravel/ML sungguhan** — menunggu OpenAPI resmi
+  dan URL staging (lihat `docs/backend-api-requests.md`).
+- **Belum diuji di HP fisik maupun headset VR** (mode VR A-Frame, kontrol
+  controller) — baru Chrome desktop dan simulasi mobile.
+- **Kompatibilitas Safari iOS** belum dicoba.

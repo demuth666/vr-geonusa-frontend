@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="footer-col">
           <h4>Destinasi VR</h4>
           <Link to="/destinations/borobudur">Candi Borobudur</Link>
-          <Link to="/#destinasi" style={{ color: '#334155' }}>Candi Prambanan (segera)</Link>
+          <Link to="/#destinasi" style={{ color: '#64748B' }}>Candi Prambanan (segera)</Link>
         </div>
         <div className="footer-col">
           <h4>Navigasi</h4>
