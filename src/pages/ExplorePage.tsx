@@ -17,11 +17,12 @@ import IdentifyButton from '@/features/ml-identification/IdentifyButton';
 import IdentifyingOverlay from '@/features/ml-identification/IdentifyingOverlay';
 import NoDetectionOverlay from '@/features/ml-identification/NoDetectionOverlay';
 import MlErrorOverlay from '@/features/ml-identification/MlErrorOverlay';
+import PredictionResultOverlay from '@/features/ml-identification/PredictionResultOverlay';
 import MaterialOverlay from '@/features/ml-identification/MaterialOverlay';
 import FinishConfirmOverlay from '@/features/learning-session/FinishConfirmOverlay';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
-import type { LearningSession } from '@/types/api';
+import type { LearningSession, MlDetection } from '@/types/api';
 
 function ExploreContent({ session }: { session: LearningSession }) {
   const sessionId = session.id;
@@ -40,6 +41,8 @@ function ExploreContent({ session }: { session: LearningSession }) {
   const setOverlay = useUiStore((s) => s.setOverlay);
   const activeHeritageObjectId = useUiStore((s) => s.activeHeritageObjectId);
   const setActiveHeritageObjectId = useUiStore((s) => s.setActiveHeritageObjectId);
+
+  const [detection, setDetection] = useState<MlDetection | null>(null);
 
   const sceneRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
@@ -83,12 +86,12 @@ function ExploreContent({ session }: { session: LearningSession }) {
       },
       {
         onSuccess: (result) => {
-          const detection = result.detections[0];
-          if (!detection) {
+          const top = result.detections[0];
+          if (!top) {
             setOverlay('no-detection');
           } else {
-            setActiveHeritageObjectId(detection.heritage_object_id);
-            setOverlay('material');
+            setDetection(top);
+            setOverlay('prediction');
           }
         },
         onError: () => setOverlay('ml-error'),
@@ -151,6 +154,20 @@ function ExploreContent({ session }: { session: LearningSession }) {
       {overlay === 'no-detection' && <NoDetectionOverlay onClose={() => setOverlay('none')} />}
       {overlay === 'ml-error' && (
         <MlErrorOverlay onRetry={handleIdentify} onClose={() => setOverlay('none')} />
+      )}
+      {overlay === 'prediction' && detection && (
+        <PredictionResultOverlay
+          detection={detection}
+          onLearn={() => {
+            setActiveHeritageObjectId(detection.heritage_object_id);
+            setDetection(null);
+            setOverlay('material');
+          }}
+          onClose={() => {
+            setDetection(null);
+            setOverlay('none');
+          }}
+        />
       )}
       {overlay === 'material' && activeHeritageObjectId && (
         <MaterialOverlay

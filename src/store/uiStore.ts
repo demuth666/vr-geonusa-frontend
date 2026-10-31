@@ -5,6 +5,7 @@ export type ExplorationOverlay =
   | 'identifying'
   | 'no-detection'
   | 'ml-error'
+  | 'prediction'
   | 'material'
   | 'finish-confirm';
 

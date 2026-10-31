@@ -22,23 +22,36 @@ interface Props {
 export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
   const sceneRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
-  const [textureLoaded, setTextureLoaded] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  // Simpan id node yang texture-nya SUDAH termuat, bukan boolean. Dengan
+  // begitu status "loaded" otomatis false begitu node berganti (dihitung saat
+  // render, tanpa effect reset yang bisa kalah balapan dengan event texture).
+  const [loadedNodeId, setLoadedNodeId] = useState<string | null>(null);
+  const textureLoaded = loadedNodeId === node.id;
   const setLastCamera = useUiStore((s) => s.setLastCamera);
 
+  // PRD #26/#47: spinner mengikuti texture panorama (a-sky), bukan event
+  // 'loaded' scene. <a-scene> di-remount tiap ganti node (key={node.id}),
+  // jadi listener dipasang SEKALI di wrapper div (tidak ikut remount) dan
+  // menangkap event 'materialtextureloaded' yang bubble dari <a-sky>.
   useEffect(() => {
-    setTextureLoaded(false);
-  }, [node.id]);
-
-  useEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const handleLoaded = () => setTextureLoaded(true);
-    scene.addEventListener('loaded', handleLoaded);
-    // Jika scene sudah pernah "loaded" sebelumnya (ganti node, scene yang
-    // sama dipakai ulang), event 'loaded' A-Frame tidak terpanggil lagi.
-    if (scene.hasLoaded) setTextureLoaded(true);
-    return () => scene.removeEventListener('loaded', handleLoaded);
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const handleTextureLoaded = (e: Event) => {
+      const target = e.target as Element | null;
+      const nodeId = target?.getAttribute?.('data-node-id');
+      if (nodeId) setLoadedNodeId(nodeId);
+    };
+    wrapper.addEventListener('materialtextureloaded', handleTextureLoaded);
+    return () => wrapper.removeEventListener('materialtextureloaded', handleTextureLoaded);
   }, []);
+
+  // Fallback: A-Frame tidak meng-emit event saat texture gagal dimuat.
+  // Jangan biarkan spinner menutup layar selamanya.
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadedNodeId(node.id), 15000);
+    return () => clearTimeout(timer);
+  }, [node.id]);
 
   useEffect(() => {
     if (sceneRef.current && cameraRef.current) {
@@ -57,7 +70,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
   }, [setLastCamera]);
 
   return (
-    <div className="relative h-full w-full bg-slate-900">
+    <div ref={wrapperRef} className="relative h-full w-full bg-slate-900">
       {!textureLoaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900">
           <Spinner label="Memuat panorama..." />
@@ -75,7 +88,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
         loading-screen="enabled: false"
         style={{ width: '100%', height: '100%' }}
       >
-        <a-sky src={node.image_url} rotation="0 -90 0" />
+        <a-sky data-node-id={node.id} src={node.image_url} rotation="0 -90 0" />
         <a-camera
           ref={cameraRef}
           rotation={`${node.initial_pitch} ${node.initial_yaw} 0`}

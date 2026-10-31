@@ -8,6 +8,7 @@ import LandingPage from '@/pages/LandingPage';
 import DestinationsPage from '@/pages/DestinationsPage';
 import BorobudurDetailPage from '@/pages/BorobudurDetailPage';
 import LoginPage from '@/pages/LoginPage';
+import TeamPage from '@/pages/TeamPage';
 import BorobudurIntroPage from '@/pages/BorobudurIntroPage';
 import PretestPage from '@/pages/PretestPage';
 import PosttestPage from '@/pages/PosttestPage';
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: '/', element: <LandingPage /> },
       { path: '/destinations', element: <DestinationsPage /> },
       { path: '/destinations/:slug', element: <BorobudurDetailPage /> },
+      { path: '/team', element: <TeamPage /> },
       { path: '/login', element: <LoginPage /> },
 
       {
