@@ -26,14 +26,14 @@ export default function SessionPhaseGuard({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="center-screen">
         <Spinner label="Memuat sesi..." />
       </div>
     );
   }
   if (isError || !session) {
     return (
-      <div className="mx-auto max-w-md px-4 py-10">
+      <div className="center-screen">
         <ErrorState error={error} onRetry={() => refetch()} />
       </div>
     );

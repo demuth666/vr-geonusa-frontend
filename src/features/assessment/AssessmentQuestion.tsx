@@ -16,10 +16,8 @@ export default function AssessmentQuestion({
 }) {
   return (
     <div>
-      <p className="text-lg font-medium text-slate-900">{item.prompt}</p>
-      <div className="mt-4">
-        <AssessmentOptions name={item.id} options={item.options} value={value} onChange={onChange} />
-      </div>
+      <p className="assess-question">{item.prompt}</p>
+      <AssessmentOptions name={item.id} options={item.options} value={value} onChange={onChange} />
     </div>
   );
 }

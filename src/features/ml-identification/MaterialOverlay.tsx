@@ -1,14 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLearningMaterial, useMarkMaterialViewed } from '@/features/learning-session/hooks';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
-import Button from '@/components/Button';
 import MicroQuizPanel from '@/features/quiz/MicroQuizPanel';
+import InfoPanel from '@/vr/hud/InfoPanel';
+import QuizPanel from '@/vr/hud/QuizPanel';
 
 /**
- * Overlay materi pembelajaran (PRD #33). Tetap di atas panorama (tidak
- * pindah halaman) — menutup overlay ini mengembalikan siswa ke panorama,
- * bukan ke halaman lain (ditangani ExplorePage via uiStore.lastCamera).
+ * Overlay materi pembelajaran (PRD #33) dengan tampilan panel "Geometri
+ * Teridentifikasi" LFS. Tetap di atas panorama (tidak pindah halaman);
+ * menutupnya mengembalikan siswa ke sudut pandang yang sama (PRD #34).
+ * Tombol "📝 Uji Pemahaman" membuka panel kuis LFS (#quiz-overlay).
  */
 export default function MaterialOverlay({
   sessionId,
@@ -21,80 +23,94 @@ export default function MaterialOverlay({
 }) {
   const materialQuery = useLearningMaterial(heritageObjectId);
   const markViewed = useMarkMaterialViewed(sessionId);
+  const [quizOpen, setQuizOpen] = useState(false);
   const [quizDone, setQuizDone] = useState(false);
   const markedRef = useRef(false);
 
+  useEffect(() => {
+    if (materialQuery.data && !markedRef.current) {
+      markedRef.current = true;
+      markViewed.mutate(heritageObjectId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialQuery.data, heritageObjectId]);
+
   if (materialQuery.isLoading) {
     return (
-      <Overlay>
-        <Spinner label="Memuat materi pembelajaran..." />
-      </Overlay>
+      <InfoPanel label="Geometri Teridentifikasi" onClose={onClose}>
+        <div className="info-spinner">
+          <Spinner label="Memuat materi pembelajaran..." />
+        </div>
+      </InfoPanel>
     );
   }
-  if (materialQuery.isError) {
+  if (materialQuery.isError || !materialQuery.data) {
     return (
-      <Overlay>
+      <InfoPanel label="Geometri Teridentifikasi" onClose={onClose}>
         <ErrorState error={materialQuery.error} onRetry={() => materialQuery.refetch()} />
-        <Button variant="ghost" className="mt-3" onClick={onClose}>
+        <button className="vr-secondary-btn" style={{ width: '100%', marginTop: 10 }} onClick={onClose}>
           Kembali ke Panorama
-        </Button>
-      </Overlay>
+        </button>
+      </InfoPanel>
     );
   }
 
-  const material = materialQuery.data!;
+  const material = materialQuery.data;
+  const geo = material.geometry;
 
-  if (!markedRef.current) {
-    markedRef.current = true;
-    markViewed.mutate(heritageObjectId);
+  if (quizOpen && material.micro_quiz_id) {
+    return (
+      <QuizPanel label="Uji Pemahaman" onClose={() => setQuizOpen(false)}>
+        <MicroQuizPanel
+          sessionId={sessionId}
+          quizId={material.micro_quiz_id}
+          onComplete={() => {
+            setQuizDone(true);
+            setQuizOpen(false);
+          }}
+        />
+      </QuizPanel>
+    );
   }
 
   return (
-    <Overlay>
-      <div className="max-h-[80vh] overflow-y-auto">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-          Objek Teridentifikasi
-        </p>
-        <h3 className="mt-1 text-xl font-bold text-slate-900">{material.heritage_object_name}</h3>
+    <InfoPanel label="Geometri Teridentifikasi" onClose={onClose} role="dialog">
+      <div className="geo-name">{material.heritage_object_name}</div>
+      {/* PRD #33: pendekatan, bukan klaim identitas mutlak. */}
+      <div className="geo-sub">Dapat didekati sebagai {geo.shape_name.toLowerCase()}</div>
+      <div className="element-tag" style={{ marginTop: 8 }}>{geo.shape_name}</div>
 
-        <div className="mt-4 rounded-xl bg-brand-50 p-4">
-          <p className="text-sm font-semibold text-brand-800">{material.geometry.shape_name}</p>
-          {/* Penting: pendekatan, bukan klaim identitas mutlak (PRD #33). */}
-          <p className="mt-1 text-sm text-slate-700">{material.geometry.description}</p>
-          <p className="mt-2 font-mono text-sm text-brand-700">{material.geometry.formula}</p>
+      <p className="info-desc">{geo.description}</p>
+
+      <div className="formula-block">
+        <div className="formula">
+          <b>{geo.formula}</b>
         </div>
-
-        <div className="mt-4 space-y-2 text-sm text-slate-600">
-          <p>{material.geometry.cultural_context}</p>
-          <p>{material.geometry.culture_geometry_relation}</p>
-        </div>
-
-        {material.micro_quiz_id && !quizDone && (
-          <div className="mt-5 border-t border-slate-200 pt-4">
-            <MicroQuizPanel
-              sessionId={sessionId}
-              quizId={material.micro_quiz_id}
-              onComplete={() => setQuizDone(true)}
-            />
-          </div>
-        )}
-
-        {(!material.micro_quiz_id || quizDone) && (
-          <Button className="mt-5 w-full" onClick={onClose}>
-            Kembali ke Panorama
-          </Button>
-        )}
       </div>
-    </Overlay>
-  );
-}
 
-function Overlay({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
-        {children}
+      <div className="context">
+        <div className="ctx-label">Konteks Budaya</div>
+        <div>{geo.cultural_context}</div>
       </div>
-    </div>
+      <div className="context">
+        <div className="ctx-label">Hubungan Budaya &amp; Geometri</div>
+        <div>{geo.culture_geometry_relation}</div>
+      </div>
+
+      <div className="info-objective">
+        <b>Tujuan Belajar</b>
+        {material.learning_objective}
+      </div>
+
+      {material.micro_quiz_id && !quizDone ? (
+        <button id="quiz-trigger-btn" onClick={() => setQuizOpen(true)}>
+          📝 Uji Pemahaman
+        </button>
+      ) : (
+        <button id="quiz-trigger-btn" onClick={onClose}>
+          Kembali ke Panorama
+        </button>
+      )}
+    </InfoPanel>
   );
 }

@@ -1,0 +1,267 @@
+/* ============================================================
+   VR-GeoNusa — tambahan untuk halaman alur PRD V1
+   (login, intro, assessment, result, eksplorasi). Semua memakai
+   token & bahasa visual dari kids.css / vr.css (desain LFS).
+   ============================================================ */
+
+/* ── Page shell (nav fixed 68px) ───────────────────────── */
+.page { min-height: 100vh; display: flex; flex-direction: column; padding-top: 68px; }
+.page-main { flex: 1; }
+
+/* ── Buttons extra ─────────────────────────────────────── */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: .5; cursor: not-allowed; transform: none;
+}
+.btn-ghost {
+  background: transparent; color: var(--text-2);
+  border: 2.5px solid transparent;
+}
+.btn-ghost:hover { background: var(--bg-2); color: var(--text); }
+.btn-block { width: 100%; }
+.btn-sm { padding: 10px 18px; font-size: 13px; border-radius: 12px; }
+
+/* Nav right-side login link — same look as LFS .nav-admin */
+.nav-admin.is-primary { background: var(--green-soft); border-color: #A7F3D0; color: var(--green-dark); }
+.nav-admin.is-primary:hover { border-color: var(--green); background: var(--green-soft); color: var(--green-dark); }
+
+/* ── Spinner ───────────────────────────────────────────── */
+.spinner { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-2); }
+.spinner-ring {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 4px solid var(--green-soft); border-top-color: var(--green);
+  animation: spin .8s linear infinite;
+}
+.spinner-label { font-size: .88rem; font-weight: 700; }
+.spinner.on-dark { color: rgba(255,255,255,.85); }
+.spinner.on-dark .spinner-ring { border-color: rgba(255,255,255,.18); border-top-color: #00e5ff; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.center-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.center-block { min-height: 50vh; display: grid; place-items: center; padding: 24px 16px; }
+
+/* ── State cards ───────────────────────────────────────── */
+.state-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+  border-radius: var(--r); padding: 22px 20px; border: 2px solid var(--card-border);
+  background: var(--card); box-shadow: var(--shadow-sm);
+}
+.state-card.is-error { background: var(--coral-soft); border-color: #FECDD3; }
+.state-card.is-error p { color: var(--coral-dark); font-weight: 700; font-size: .92rem; }
+.state-card.is-empty { border-style: dashed; box-shadow: none; }
+.state-card.is-empty .state-title { font-family: var(--f-display); font-weight: 800; color: var(--text); }
+.state-card.is-empty .state-desc { font-size: .88rem; color: var(--text-2); }
+
+/* ── Generic clay card ─────────────────────────────────── */
+.clay-card {
+  background: var(--card); border: 2.5px solid var(--card-border);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-card);
+  padding: clamp(20px, 4vw, 32px);
+}
+
+/* ── Splash pages (login, intro): LFS #splash, scrollable ─ */
+#splash { overflow-y: auto; }
+#splash .splash-form { display: flex; flex-direction: column; align-items: center; }
+#splash .splash-error-box { width: 280px; margin-bottom: 12px; }
+#splash .splash-back {
+  margin-top: 18px; font-size: .8rem; font-weight: 700; color: #64748B;
+}
+#splash .splash-back:hover { color: #10B981; }
+#splash .intro-list {
+  width: min(360px, 100%); margin: 0 0 22px; padding: 16px 18px 16px 18px;
+  background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06); list-style: none;
+}
+#splash .intro-list li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: .9rem; color: #334155; padding: 5px 0; line-height: 1.5;
+}
+#splash .intro-list li::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%; background: #10B981;
+  margin-top: 7px; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(16,185,129,.18);
+}
+#splash .intro-resume {
+  width: min(320px, 100%); margin-bottom: 18px; padding: 16px 18px; text-align: center;
+  background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+#splash .intro-resume p { color: #334155; font-size: .92rem; }
+#splash .intro-resume .resume-progress { margin-top: 10px; }
+#splash .intro-resume .resume-pct { color: #047857; font-weight: 800; font-size: .85rem; margin-top: 6px; }
+
+/* ── Progress bar (clay) ───────────────────────────────── */
+.progress-track { height: 8px; border-radius: 999px; background: var(--bg-2); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 999px; background: var(--green); transition: width .5s var(--ease-out); }
+
+/* ── Assessment (pretest / posttest / self-efficacy) ──── */
+.assess-wrap { max-width: 660px; margin: 0 auto; padding: 40px 16px 64px; }
+.assess-head { text-align: center; margin-bottom: 24px; }
+.assess-head .section-h2 { margin-bottom: 6px; }
+.assess-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.assess-progress .progress-track { flex: 1; }
+.assess-progress-label { font-size: .8rem; font-weight: 800; color: var(--text-2); white-space: nowrap; }
+.assess-question { font-family: var(--f-display); font-size: 1.2rem; font-weight: 700; color: var(--text); line-height: 1.45; margin-bottom: 16px; }
+.assess-options { display: flex; flex-direction: column; gap: 10px; }
+.assess-option {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  padding: 13px 16px; border-radius: 14px; border: 2.5px solid var(--card-border);
+  background: var(--card); font-size: .95rem; font-weight: 700; color: var(--text);
+  box-shadow: 0 3px 0 #E2E8F0;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.assess-option:hover { border-color: #A7F3D0; background: #F0FDF4; }
+.assess-option.is-selected { border-color: var(--green); background: var(--green-soft); box-shadow: 0 3px 0 var(--green-dark); }
+.assess-option input { accent-color: var(--green); width: 18px; height: 18px; flex-shrink: 0; }
+.assess-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+/* ── Result page ───────────────────────────────────────── */
+.result-wrap { max-width: 720px; margin: 0 auto; padding: 56px 16px 72px; text-align: center; }
+.result-badge {
+  width: 84px; height: 84px; border-radius: 24px; margin: 0 auto 20px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--amber), #FB923C);
+  box-shadow: 0 5px 0 var(--amber-dark), 0 10px 24px rgba(245,158,11,.3);
+}
+.result-badge svg { width: 42px; height: 42px; color: #fff; }
+.result-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 32px 0; }
+.result-stats .hero-stat { flex-direction: column; text-align: center; padding: 18px 12px; }
+.result-stats .hero-stat-lbl { font-size: .78rem; }
+
+/* ── Detail page ───────────────────────────────────────── */
+.detail-hero { padding-top: clamp(32px, 5vw, 56px); padding-bottom: clamp(24px, 4vw, 40px); }
+.detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; align-items: center; }
+.detail-photo { border-radius: var(--r-xl); overflow: hidden; border: 2.5px solid var(--card-border); box-shadow: var(--shadow-card); position: relative; aspect-ratio: 4 / 3; background: var(--bg-2); }
+.detail-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 35%; }
+.detail-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.detail-list { text-align: left; }
+.detail-list ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.detail-list li { display: flex; gap: 10px; font-size: .9rem; color: var(--text-2); line-height: 1.55; }
+.detail-list li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-top: 8px; flex-shrink: 0; }
+.detail-list.sky li::before { background: var(--sky); }
+.detail-list .step-title { display: flex; align-items: center; gap: 10px; }
+.detail-meta { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0 28px; }
+
+/* ── Not found ─────────────────────────────────────────── */
+.nf-code { font-family: var(--f-display); font-size: clamp(4rem, 12vw, 7rem); font-weight: 800; line-height: 1; color: var(--green); }
+
+/* ============================================================
+   EKSPLORASI — overlay tambahan di atas HUD LFS (vr.css)
+   ============================================================ */
+.vr-stage { position: relative; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; background: #0F172A; font-family: 'Segoe UI', system-ui, sans-serif; }
+.vr-stage a-scene { position: absolute; inset: 0; }
+
+/* Top-right chip — gaya #tour-jump LFS */
+.tour-chip {
+  position: fixed; top: 16px; right: 16px; z-index: 100;
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.92); border: 1.5px solid #E2E8F0;
+  color: #0F172A; border-radius: 12px; padding: 8px 10px 8px 14px;
+  font-size: 12px; font-weight: 700;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(15,23,42,0.08);
+}
+.tour-chip-progress { display: flex; align-items: center; gap: 8px; }
+.tour-chip-progress .progress-track { width: 90px; height: 6px; background: #E2E8F0; }
+.tour-chip-label { color: #10B981; font-size: 9px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; }
+.tour-finish-btn {
+  border: none; border-radius: 9px; padding: 8px 12px; cursor: pointer;
+  background: #10B981; color: #fff; font-family: inherit; font-size: 12px; font-weight: 800;
+  box-shadow: 0 3px 0 #047857; transition: transform .1s, box-shadow .1s, background .15s;
+}
+.tour-finish-btn:hover { background: #0EAF7A; }
+.tour-finish-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #047857; }
+.tour-finish-btn:disabled { background: #CBD5E1; box-shadow: 0 3px 0 #94A3B8; cursor: not-allowed; transform: none; }
+
+/* Identify button — amber, sama dengan marker "Identifikasi" LFS (#FFB74D) */
+#identify-btn {
+  position: fixed; right: 16px; bottom: 64px; z-index: 100;
+  display: inline-flex; align-items: center; gap: 8px;
+  border: none; border-radius: 12px; padding: 12px 20px; cursor: pointer;
+  background: #FFB74D; color: #1a1000; font-family: inherit; font-size: 14px; font-weight: 800;
+  box-shadow: 0 4px 0 #B45309, 0 8px 20px rgba(245,158,11,.30);
+  transition: transform .1s, box-shadow .1s, filter .15s;
+}
+#identify-btn svg { width: 18px; height: 18px; }
+#identify-btn:hover { filter: brightness(1.05); }
+#identify-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #B45309; }
+#identify-btn:disabled { opacity: .6; cursor: progress; transform: none; }
+
+/* "← Portal" tampil (LFS menyembunyikannya sampai scene dimuat) */
+#scene-btn.is-visible { display: block; right: 92px; } /* sisakan tempat tombol VR A-Frame di pojok kanan bawah */
+
+/* Info overlay: tinggi maksimum + scroll untuk materi panjang */
+#info-overlay { max-height: min(640px, calc(100vh - 140px)); overflow-y: auto; }
+#info-overlay .info-desc { color: #334155; font-size: 12.5px; line-height: 1.7; margin: 10px 0 4px; }
+#info-overlay .info-objective {
+  margin-top: 10px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 10px;
+  padding: 9px 12px; color: #065F46; font-size: 11.5px; line-height: 1.6;
+}
+#info-overlay .info-objective b { display: block; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #10B981; margin-bottom: 2px; }
+#info-overlay .info-msg { color: #0F172A; font-size: 15px; font-weight: 800; margin: 8px 0 4px; line-height: 1.4; }
+#info-overlay .info-hint { color: #64748B; font-size: 12px; line-height: 1.6; }
+#info-overlay .info-actions { display: flex; gap: 8px; margin-top: 14px; }
+#info-overlay .info-actions > * { flex: 1; }
+.vr-secondary-btn {
+  padding: 12px; border-radius: 10px; border: 1.5px solid #E2E8F0; background: #F8FAFC;
+  color: #475569; font-family: inherit; font-weight: 800; font-size: 13px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.vr-secondary-btn:hover { background: #F1F5F9; border-color: #CBD5E1; }
+#info-overlay .info-spinner { padding: 18px 0 6px; }
+#info-overlay .info-spinner .spinner-label { font-size: 12.5px; color: #475569; }
+#info-overlay .state-card { padding: 14px; box-shadow: none; margin-top: 10px; }
+
+/* Quiz overlay: opsi dari backend; status hanya dari respons server */
+#quiz-overlay { max-height: calc(100vh - 32px); overflow-y: auto; }
+#quiz-overlay .quiz-option.is-selected { background: #F0FDF4; border-color: #10B981; font-weight: 700; }
+#quiz-overlay .quiz-feedback .fb-title { font-weight: 800; font-size: 13.5px; margin-bottom: 2px; }
+#quiz-overlay .quiz-feedback.correct .fb-title { color: #047857; }
+#quiz-overlay .quiz-feedback.wrong .fb-title { color: #B45309; }
+#quiz-overlay .quiz-title { color: #64748B; font-size: 12px; font-weight: 700; margin-top: 2px; }
+#quiz-overlay .confirm-sub { color: #475569; font-size: 13px; line-height: 1.6; margin: 6px 0 16px; }
+#quiz-overlay .info-actions { display: flex; gap: 8px; margin-top: 14px; }
+#quiz-overlay .info-actions > * { flex: 1; }
+#quiz-overlay #quiz-trigger-btn:disabled { background: #CBD5E1; box-shadow: 0 3px 0 #94A3B8; cursor: not-allowed; }
+
+/* Loading texture panorama — LFS #loading-bar + #tour-fade */
+#loading-bar.is-loading { width: 70%; }
+.tour-loading-label {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 61;
+}
+
+/* Error toast saat completion gagal */
+.vr-toast { position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 250; width: min(360px, calc(100vw - 32px)); }
+
+/* ── Mobile: overlay jadi bottom sheet ─────────────────── */
+@media (max-width: 640px) {
+  #info-overlay {
+    top: auto; bottom: 12px; left: 12px; right: 12px; width: auto;
+    transform: none; animation: none; max-height: 68vh;
+  }
+  #quiz-overlay { width: calc(100vw - 24px); }
+  #tour-panel { display: none; }
+  #controls-hint { white-space: normal; width: calc(100vw - 32px); text-align: center; bottom: 120px; }
+  .tour-chip { left: auto; max-width: calc(100vw - 32px); }
+  .tour-chip-progress .progress-track { width: 56px; }
+  #hud { top: 70px; }
+  .result-stats { grid-template-columns: 1fr; }
+  .detail-lists { grid-template-columns: 1fr; }
+}
+@media (max-width: 1100px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
+
+/* Tombol utama di panel VR — sama persis dengan #quiz-trigger-btn LFS */
+.vr-primary-btn {
+  width: 100%; padding: 12px; border-radius: 10px; border: none;
+  background: #10B981; color: #fff; font-weight: 800; font-size: 13px; cursor: pointer;
+  font-family: inherit; pointer-events: auto;
+  box-shadow: 0 3px 0 #047857, 0 6px 16px rgba(16,185,129,0.25);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+}
+.vr-primary-btn:hover { background: #0EAF7A; }
+.vr-primary-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #047857; }
+.vr-primary-btn:disabled { background: #CBD5E1; box-shadow: 0 3px 0 #94A3B8; cursor: not-allowed; transform: none; }
+.vr-primary-btn.mt { margin-top: 14px; }
+#quiz-overlay label.quiz-option { display: flex; align-items: center; gap: 10px; }
+#quiz-overlay label.quiz-option input { accent-color: #10B981; flex-shrink: 0; }

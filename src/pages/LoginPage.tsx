@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Button from '@/components/Button';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ErrorState from '@/components/ErrorState';
+import { SplashLogo } from '@/components/icons';
 import { useLogin } from '@/features/auth/hooks';
 
+/**
+ * Login siswa — tampilan splash tur 360° LFS (#splash, vr.css).
+ * Mode "Tamu" LFS tidak dipakai: PRD V1 mewajibkan login sebelum sesi.
+ */
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -26,46 +29,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="mx-auto max-w-sm px-4 py-16">
-        <h1 className="text-2xl font-bold text-slate-900">Masuk</h1>
-        <p className="mt-1 text-sm text-slate-500">Masuk untuk memulai eksplorasi pembelajaran.</p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="identifier" className="block text-sm font-medium text-slate-700">
-              NISN / Email
-            </label>
-            <input
-              id="identifier"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-              autoComplete="username"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-              Kata Sandi
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
-              autoComplete="current-password"
-            />
-          </div>
-
-          {login.isError && <ErrorState error={login.error} />}
-
-          <Button type="submit" disabled={login.isPending} className="w-full">
-            {login.isPending ? 'Memproses…' : 'Masuk'}
-          </Button>
-        </form>
+    <main id="splash">
+      <div className="logo-wrap">
+        <SplashLogo />
       </div>
-    </div>
+      <h1>Masuk</h1>
+      <p className="tagline">Masuk untuk memulai eksplorasi pembelajaran.</p>
+
+      <form onSubmit={handleSubmit} className="splash-form">
+        <input
+          id="identifier"
+          className="splash-input"
+          aria-label="NISN / Email"
+          placeholder="NISN / Email"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          autoComplete="username"
+        />
+        <input
+          id="password"
+          className="splash-input"
+          type="password"
+          aria-label="Kata Sandi"
+          placeholder="Kata Sandi"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+        />
+
+        {login.isError && (
+          <div className="splash-error-box">
+            <ErrorState error={login.error} />
+          </div>
+        )}
+
+        <button type="submit" disabled={login.isPending}>
+          {login.isPending ? 'Memproses…' : 'Masuk'}
+        </button>
+      </form>
+
+      <div className="meta">
+        Gunakan akun siswa dari sekolahmu.
+        <br />
+        Komputer, HP, atau headset VR — semuanya bisa!
+      </div>
+      <Link to="/" className="splash-back">
+        ← Kembali ke Portal
+      </Link>
+    </main>
   );
 }

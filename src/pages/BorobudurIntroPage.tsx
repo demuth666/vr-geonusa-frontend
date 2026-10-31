@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom';
-import Button from '@/components/Button';
+import { Link, useNavigate } from 'react-router-dom';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
+import { SplashLogo } from '@/components/icons';
 import { useActiveSession, useCreateSession } from '@/features/learning-session/hooks';
 import { useHeritageSite } from '@/features/heritage/hooks';
 import { sessionPhaseToPath } from '@/utils/session-routing';
@@ -10,6 +10,7 @@ import { sessionPhaseToPath } from '@/utils/session-routing';
  * PRD #17/#18: jelaskan aktivitas, lalu deteksi active session — resume
  * kalau ada, buat baru kalau belum ada. Frontend tidak pernah menebak fase
  * sendiri; routing berikutnya selalu memakai phase dari respons backend.
+ * Tampilan: splash tur 360° LFS.
  */
 export default function BorobudurIntroPage() {
   const navigate = useNavigate();
@@ -19,23 +20,26 @@ export default function BorobudurIntroPage() {
 
   if (siteQuery.isLoading || activeSessionQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="center-screen">
         <Spinner label="Memuat..." />
       </div>
     );
   }
   if (siteQuery.isError || !siteQuery.data) {
     return (
-      <div className="mx-auto max-w-md px-4 py-20">
-        <ErrorState error={siteQuery.error} onRetry={() => siteQuery.refetch()} />
+      <div className="center-screen">
+        <div style={{ width: 'min(420px, 100%)' }}>
+          <ErrorState error={siteQuery.error} onRetry={() => siteQuery.refetch()} />
+        </div>
       </div>
     );
   }
 
+  const site = siteQuery.data;
   const activeSession = activeSessionQuery.data;
 
   function handleCreate() {
-    createSession.mutate(siteQuery.data!.id, {
+    createSession.mutate(site.id, {
       onSuccess: (session) => navigate(sessionPhaseToPath(session.id, session.phase)),
     });
   }
@@ -45,43 +49,54 @@ export default function BorobudurIntroPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-900 px-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-8 text-center shadow-xl">
-        <h1 className="text-2xl font-bold text-slate-900">Candi Borobudur</h1>
-
-        {activeSession ? (
-          <>
-            <p className="mt-4 text-slate-700">
-              Kamu memiliki eksplorasi yang belum selesai.
-            </p>
-            <p className="mt-1 text-sm font-semibold text-brand-700">
-              Progress: {activeSession.progress_percentage}%
-            </p>
-            <Button className="mt-6" onClick={handleResume}>
-              Lanjutkan Eksplorasi
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="mt-4 text-left text-slate-700">Dalam pengalaman ini kamu akan:</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-left text-sm text-slate-600">
-              <li>menjelajahi panorama Candi Borobudur,</li>
-              <li>mengamati elemen arsitektur,</li>
-              <li>mengidentifikasi bentuk,</li>
-              <li>mempelajari konsep geometri,</li>
-              <li>menjawab aktivitas pembelajaran.</li>
-            </ul>
-            {createSession.isError && (
-              <div className="mt-4">
-                <ErrorState error={createSession.error} onRetry={handleCreate} />
-              </div>
-            )}
-            <Button className="mt-6" onClick={handleCreate} disabled={createSession.isPending}>
-              {createSession.isPending ? 'Menyiapkan…' : 'Mulai Belajar'}
-            </Button>
-          </>
-        )}
+    <main id="splash">
+      <div className="logo-wrap">
+        <SplashLogo />
       </div>
-    </div>
+      <h1>{site.name}</h1>
+      <p className="tagline">Tur 360° — Foto Panorama Asli</p>
+
+      {activeSession ? (
+        <>
+          <div className="intro-resume">
+            <p>Kamu memiliki eksplorasi yang belum selesai.</p>
+            <div className="resume-progress progress-track">
+              <div className="progress-fill" style={{ width: `${activeSession.progress_percentage}%` }} />
+            </div>
+            <p className="resume-pct">Progress: {activeSession.progress_percentage}%</p>
+          </div>
+          <button type="button" onClick={handleResume}>
+            Lanjutkan Eksplorasi
+          </button>
+        </>
+      ) : (
+        <>
+          <ul className="intro-list" aria-label="Dalam pengalaman ini kamu akan">
+            <li>menjelajahi panorama Candi Borobudur,</li>
+            <li>mengamati elemen arsitektur,</li>
+            <li>mengidentifikasi bentuk,</li>
+            <li>mempelajari konsep geometri,</li>
+            <li>menjawab aktivitas pembelajaran.</li>
+          </ul>
+          {createSession.isError && (
+            <div className="splash-error-box">
+              <ErrorState error={createSession.error} onRetry={handleCreate} />
+            </div>
+          )}
+          <button type="button" onClick={handleCreate} disabled={createSession.isPending}>
+            {createSession.isPending ? 'Menyiapkan…' : 'Mulai Belajar'}
+          </button>
+        </>
+      )}
+
+      <div className="meta">
+        Pretest singkat → jelajahi panorama 360° → identifikasi bentuk → kuis → posttest.
+        <br />
+        Klik lingkaran untuk berpindah titik · tekan "Identifikasi" untuk mengenali bentuk
+      </div>
+      <Link to="/" className="splash-back">
+        ← Portal
+      </Link>
+    </main>
   );
 }

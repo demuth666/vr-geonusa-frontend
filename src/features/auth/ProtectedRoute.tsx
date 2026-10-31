@@ -14,7 +14,7 @@ export default function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="center-screen">
         <Spinner label="Memeriksa status masuk..." />
       </div>
     );

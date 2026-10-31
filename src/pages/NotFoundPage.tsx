@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
-import Button from '@/components/Button';
+import { HomeIcon } from '@/components/icons';
 
 export default function NotFoundPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-center">
-      <h1 className="text-3xl font-bold text-slate-900">Halaman Tidak Ditemukan</h1>
-      <p className="text-slate-500">Halaman yang kamu cari tidak tersedia.</p>
-      <Link to="/">
-        <Button>Kembali ke Beranda</Button>
-      </Link>
+    <div className="center-screen" style={{ textAlign: 'center' }}>
+      <div className="blob-bg" aria-hidden="true" />
+      <div>
+        <div className="nf-code" aria-hidden="true">404</div>
+        <h1 className="section-h2" style={{ marginTop: 8 }}>Halaman Tidak Ditemukan</h1>
+        <p className="section-desc" style={{ marginBottom: 24 }}>Halaman yang kamu cari tidak tersedia.</p>
+        <Link to="/" className="btn btn-primary">
+          <HomeIcon />
+          Kembali ke Beranda
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,118 +1,177 @@
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import Button from '@/components/Button';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
+import EmptyState from '@/components/EmptyState';
 import { useHeritageSites } from '@/features/heritage/hooks';
+import DestinationBento from '@/features/landing/DestinationBento';
+import HowToPlay from '@/features/landing/HowToPlay';
+import GeometryGallery from '@/features/landing/GeometryGallery';
+import TeamSection from '@/features/landing/TeamSection';
+import { useReveal } from '@/hooks/useReveal';
+import {
+  BookIcon,
+  FlagIcon,
+  GlobeThinIcon,
+  HomeIcon,
+  LayersIcon,
+  MapPinIcon,
+  PlayIcon,
+  SearchIcon,
+} from '@/components/icons';
 
+/**
+ * Landing page — desain & isi dari VR-GeoNusa LFS (public/index.html).
+ * Data destinasi dari GET /heritage-sites (PRD #13), sisanya konten statis.
+ */
 export default function LandingPage() {
   const sitesQuery = useHeritageSites();
+  const sites = sitesQuery.data ?? [];
+  const primary = sites.find((s) => s.status === 'available');
+  const activeCount = sites.filter((s) => s.status === 'available').length;
+  const areaCount = sites.reduce((n, s) => n + (s.status === 'available' ? s.available_areas_count : 0), 0);
+
+  useReveal([sitesQuery.status]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <>
+      <div className="blob-bg" aria-hidden="true" />
+      <a href="#destinasi" className="skip-link">
+        Lewati ke konten
+      </a>
       <Navbar />
 
-      <section className="bg-gradient-to-b from-brand-50 to-slate-50 px-4 py-16 text-center">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">
-          Pembelajaran Geometri Berbasis VR/WebXR
-        </p>
-        <h1 className="mx-auto mt-3 max-w-2xl text-4xl font-extrabold text-slate-900">
-          Jelajahi Candi, Temukan Geometri
-        </h1>
-        <p className="mx-auto mt-4 max-w-xl text-slate-600">
-          VR-GeoNusa membantu siswa SMP mempelajari konsep geometri lewat eksplorasi panorama 360°
-          situs warisan budaya Indonesia, dimulai dari Candi Borobudur.
-        </p>
-        <div className="mt-6">
-          <Link to="/destinations/borobudur">
-            <Button>Mulai Jelajahi Borobudur</Button>
-          </Link>
-        </div>
-      </section>
+      {/* ═══ HERO ═══ */}
+      <section className="hero" aria-labelledby="hero-h1">
+        <div className="hero-left">
+          <div className="hero-kicker" aria-label="Hibah Fundamental BIMA 2026">
+            <FlagIcon />
+            Hibah Fundamental BIMA 2026
+          </div>
 
-      <section className="mx-auto max-w-4xl px-4 py-14 text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Tentang VR-GeoNusa</h2>
-        <p className="mt-3 text-slate-600">
-          Setiap panorama dilengkapi identifikasi objek berbasis Machine Learning untuk membantu
-          siswa mengenali bentuk geometri pada elemen arsitektur, lalu mempelajari materi dan kuis
-          singkat yang relevan — semua tanpa harus meninggalkan pengalaman VR.
-        </p>
-      </section>
+          <h1 className="hero-h1" id="hero-h1">
+            Petualangan
+            <br />
+            <span className="accent-green">Geometri</span> di
+            <br />
+            <span className="accent-amber">Candi Nusantara</span>
+          </h1>
+          <p className="hero-sub">
+            Masuki dunia Virtual Reality dan temukan bentuk-bentuk geometri yang tersembunyi di dalam arsitektur
+            Candi Borobudur dan Prambanan. Belajar matematika dengan cara yang seru!
+          </p>
 
-      <section id="destinations" className="mx-auto max-w-5xl px-4 py-10">
-        <h2 className="text-center text-2xl font-bold text-slate-900">Destinasi</h2>
-        <div className="mt-6">
-          {sitesQuery.isLoading && (
-            <div className="flex justify-center">
-              <Spinner label="Memuat destinasi..." />
+          <div className="hero-btns">
+            <a href="#destinasi" className="btn btn-primary">
+              <PlayIcon />
+              Mulai Petualangan 360
+            </a>
+            <a href="#cara-main" className="btn btn-outline">
+              <BookIcon />
+              Cara Bermain
+            </a>
+          </div>
+
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <div className="hero-stat-ico ico-green">
+                <HomeIcon />
+              </div>
+              <div>
+                <span className="hero-stat-num" id="stat-scenes">{sitesQuery.data ? activeCount : '–'}</span>
+                <span className="hero-stat-lbl">Candi Aktif</span>
+              </div>
             </div>
-          )}
-          {sitesQuery.isError && <ErrorState error={sitesQuery.error} onRetry={() => sitesQuery.refetch()} />}
-          {sitesQuery.data && (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {sitesQuery.data.map((site) => (
-                <div key={site.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <img
-                    src={site.cover_image_url}
-                    alt={site.name}
-                    className="aspect-video w-full object-cover"
-                  />
-                  <div className="p-5">
-                    <h3 className="text-lg font-bold text-slate-900">{site.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{site.location}</p>
-                    {site.status === 'available' ? (
-                      <Link to={`/destinations/${site.slug}`} className="mt-3 inline-block">
-                        <Button variant="outline">Jelajahi</Button>
-                      </Link>
-                    ) : (
-                      <span className="mt-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                        Segera Hadir
-                      </span>
-                    )}
-                  </div>
+            <div className="hero-stat">
+              <div className="hero-stat-ico ico-sky">
+                <SearchIcon />
+              </div>
+              <div>
+                <span className="hero-stat-num" id="stat-objects">{sitesQuery.data ? areaCount : '–'}</span>
+                <span className="hero-stat-lbl">Area Panorama</span>
+              </div>
+            </div>
+            <div className="hero-stat">
+              <div className="hero-stat-ico ico-amber">
+                <LayersIcon />
+              </div>
+              <div>
+                <span className="hero-stat-num">8</span>
+                <span className="hero-stat-lbl">Bangun Ruang</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-right" aria-hidden="true">
+          <div className="hero-card">
+            <div className="hero-card-photo">
+              <img src={primary?.cover_image_url ?? '/assets/images/borobudur.jpg'} alt="Candi Borobudur" />
+              <div className="hero-card-photo-overlay" />
+              <div className="hero-card-photo-badge">
+                <span className="badge-live-dot" />
+                <GlobeThinIcon />
+                Tur 360 Aktif
+              </div>
+              <div className="hero-card-caption">
+                <strong>{primary?.name ?? 'Candi Borobudur'}</strong>
+                <span>Magelang, Jawa Tengah · Abad ke-8 M</span>
+              </div>
+            </div>
+            <div className="hero-card-body">
+              <div className="hero-card-stat">
+                <div className="float-stat-ico">
+                  <LayersIcon />
                 </div>
-              ))}
+                <div>
+                  <span className="float-stat-num">8</span>
+                  <span className="float-stat-lbl">Bangun Ruang</span>
+                </div>
+              </div>
+              <Link to="/destinations/borobudur" className="btn btn-primary hero-card-cta" tabIndex={-1}>
+                <PlayIcon />
+                Mulai Petualangan 360
+              </Link>
             </div>
-          )}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-4xl px-4 py-14 text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Cara Kerja</h2>
-        <div className="mt-6 grid gap-4 text-left sm:grid-cols-2">
-          {[
-            'Pilih destinasi dan masuk dengan akun siswa kamu.',
-            'Jelajahi panorama 360° dan navigasikan antar area.',
-            'Tekan "Identifikasi" untuk mengenali objek arsitektur di depanmu.',
-            'Pelajari materi geometri dan jawab kuis singkat sebelum melanjutkan.',
-          ].map((step, i) => (
-            <div key={i} className="rounded-xl border border-slate-200 bg-white p-4">
-              <span className="text-sm font-bold text-brand-600">Langkah {i + 1}</span>
-              <p className="mt-1 text-sm text-slate-600">{step}</p>
-            </div>
-          ))}
+      {/* ═══ DESTINASI ═══ */}
+      <section id="destinasi" className="section section-alt" aria-labelledby="dest-h2">
+        <div className="section-head reveal">
+          <div className="section-kicker">
+            <MapPinIcon />
+            Pilih Destinasi
+          </div>
+          <h2 className="section-h2" id="dest-h2">
+            Jelajahi <em>Candi Indonesia</em>
+          </h2>
+          <p className="section-desc">
+            Pilih candi yang ingin kamu masuki dan temukan bentuk geometri yang tersembunyi di setiap sudutnya!
+          </p>
         </div>
+
+        {sitesQuery.isLoading && (
+          <div className="center-block">
+            <Spinner label="Memuat destinasi..." />
+          </div>
+        )}
+        {sitesQuery.isError && <ErrorState error={sitesQuery.error} onRetry={() => sitesQuery.refetch()} />}
+        {sitesQuery.data && sitesQuery.data.length === 0 && <EmptyState title="Belum ada destinasi" />}
+        {sitesQuery.data && sitesQuery.data.length > 0 && (
+          <div className="reveal in">
+            <DestinationBento sites={sitesQuery.data} />
+          </div>
+        )}
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 py-14 text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Konteks Riset &amp; Pendidikan</h2>
-        <p className="mt-3 text-slate-600">
-          VR-GeoNusa dikembangkan sebagai bagian dari riset pembelajaran geometri berbasis VR untuk
-          siswa SMP, mengukur pemahaman konsep melalui pretest, posttest, dan kuesioner
-          self-efficacy.
-        </p>
-      </section>
-
-      <section id="team" className="mx-auto max-w-4xl px-4 py-14 text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Tim</h2>
-        <p className="mt-3 text-slate-600">
-          Dikembangkan oleh tim peneliti, dosen, dan mahasiswa yang berfokus pada pembelajaran
-          geometri berbasis teknologi immersive.
-        </p>
-      </section>
+      <HowToPlay />
+      <GeometryGallery />
+      <TeamSection />
 
       <Footer />
-    </div>
+    </>
   );
 }

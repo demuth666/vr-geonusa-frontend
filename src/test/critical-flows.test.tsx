@@ -133,9 +133,12 @@ describe('PRD #55 critical frontend tests', () => {
     await screen.findByTestId('panorama');
     await user.click(screen.getByRole('button', { name: 'Identifikasi objek pada pandangan saat ini' }));
     expect(await screen.findByText('STUPA')).toBeTruthy();
-    expect(screen.getByText('Keyakinan model: 94%')).toBeTruthy();
+    expect(screen.getByText('Keyakinan Model')).toBeTruthy();
+    expect(screen.getByText('94%')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Pelajari Bentuk' }));
-    // Overlay materi + micro quiz terbuka.
+    // Overlay materi terbuka, lalu panel kuis dari tombol "Uji Pemahaman".
+    expect(await screen.findByText('Dapat didekati sebagai setengah bola')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Uji Pemahaman/ }));
     expect(await screen.findByText(MOCK_MICRO_QUIZ.title)).toBeTruthy();
   });
 

@@ -27,7 +27,14 @@ interface Props {
  * Tidak pernah menampilkan/menerima is_correct/correct_answer (PRD #21).
  * Transisi fase session HANYA terjadi setelah backend mengonfirmasi submit.
  */
+const KICKER: Record<AssessmentInstrument, string> = {
+  pretest: 'Sebelum Petualangan',
+  posttest: 'Setelah Petualangan',
+  self_efficacy: 'Kuesioner',
+};
+
 export default function AssessmentPage({ sessionId, instrument, title, description, onSubmitted }: Props) {
+  const kicker = KICKER[instrument];
   const startAttempt = useStartAssessmentAttempt();
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
@@ -47,16 +54,24 @@ export default function AssessmentPage({ sessionId, instrument, title, descripti
 
   if (startAttempt.isPending || attemptQuery.isLoading || !attemptQuery.data) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="center-screen">
         <Spinner label={`Memuat ${title.toLowerCase()}...`} />
       </div>
     );
   }
   if (startAttempt.isError) {
-    return <ErrorState error={startAttempt.error} onRetry={() => startAttempt.mutate({ sessionId, instrument })} />;
+    return (
+      <div className="center-screen">
+        <ErrorState error={startAttempt.error} onRetry={() => startAttempt.mutate({ sessionId, instrument })} />
+      </div>
+    );
   }
   if (attemptQuery.isError) {
-    return <ErrorState error={attemptQuery.error} onRetry={() => attemptQuery.refetch()} />;
+    return (
+      <div className="center-screen">
+        <ErrorState error={attemptQuery.error} onRetry={() => attemptQuery.refetch()} />
+      </div>
+    );
   }
 
   const attempt = attemptQuery.data;
@@ -78,31 +93,34 @@ export default function AssessmentPage({ sessionId, instrument, title, descripti
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
-
-      <div className="mt-6">
-        <AssessmentProgress current={index + 1} total={attempt.items.length} />
-      </div>
-
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <AssessmentQuestion item={item} value={selected} onChange={handleSelect} />
-        <AssessmentNavigation
-          canGoBack={index > 0}
-          isLast={isLast}
-          disabled={!selected}
-          submitting={submitAttempt.isPending}
-          onBack={() => setIndex((i) => Math.max(0, i - 1))}
-          onNext={handleNext}
-        />
-      </div>
-
-      {submitAttempt.isError && (
-        <div className="mt-4">
-          <ErrorState error={submitAttempt.error} />
+    <div className="page" style={{ paddingTop: 0 }}>
+      <div className="blob-bg" aria-hidden="true" />
+      <main className="assess-wrap">
+        <div className="assess-head">
+          <div className="section-kicker">{kicker}</div>
+          <h1 className="section-h2">{title}</h1>
+          {description && <p className="section-desc">{description}</p>}
         </div>
-      )}
+
+        <div className="clay-card">
+          <AssessmentProgress current={index + 1} total={attempt.items.length} />
+          <AssessmentQuestion item={item} value={selected} onChange={handleSelect} />
+          <AssessmentNavigation
+            canGoBack={index > 0}
+            isLast={isLast}
+            disabled={!selected}
+            submitting={submitAttempt.isPending}
+            onBack={() => setIndex((i) => Math.max(0, i - 1))}
+            onNext={handleNext}
+          />
+        </div>
+
+        {submitAttempt.isError && (
+          <div style={{ marginTop: 16 }}>
+            <ErrorState error={submitAttempt.error} />
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import type { PanoramaHotspot } from '@/types/api';
-import { hotspotPosition } from './position';
+import { hotspotPosition, hotspotRotation } from './position';
 
 /**
- * Hotspot navigasi antar panorama node. Posisi SELALU dihitung dari
- * yaw/pitch yang dikirim backend (PRD #25, #26) — tidak pernah
- * "Point A -> Point B" yang di-hardcode di frontend.
+ * Hotspot navigasi antar panorama node — tampilan ring cyan LFS
+ * (public/js/tour.js buildHotspot). Posisi SELALU dihitung dari yaw/pitch
+ * yang dikirim backend (PRD #25, #26), tidak pernah di-hardcode.
+ * Class raycast + listener dipasang di ring itu sendiri (mesh yang kena ray).
  */
 export default function Hotspot({
   hotspot,
@@ -14,20 +15,19 @@ export default function Hotspot({
   onActivate: (targetNodeId: string) => void;
 }) {
   return (
-    <a-entity
+    <a-ring
+      class="clickable tour-hotspot-ring"
       position={hotspotPosition(hotspot.yaw, hotspot.pitch)}
-      class="clickable"
+      rotation={hotspotRotation(hotspot.yaw, hotspot.pitch)}
+      radius-inner="0.28"
+      radius-outer="0.4"
+      color="#00e5ff"
+      opacity="0.85"
+      side="double"
+      animation__pulse="property: material.opacity; from: 0.55; to: 1; dir: alternate; dur: 800; loop: true; easing: easeInOutSine"
       onClick={() => onActivate(hotspot.target_node_id)}
     >
-      <a-entity
-        geometry="primitive: ring; radiusInner: 0.3; radiusOuter: 0.45"
-        material="color: #10B981; shader: flat; opacity: 0.9"
-        animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.15 1.15 1.15"
-      />
-      <a-entity
-        text={`value: ${hotspot.label}; align: center; color: #FFFFFF; width: 4`}
-        position="0 -0.6 0"
-      />
-    </a-entity>
+      <a-text value={hotspot.label} align="center" color="#ffffff" width="2.4" position="0 -0.62 0" />
+    </a-ring>
   );
 }

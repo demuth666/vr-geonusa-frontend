@@ -8,6 +8,8 @@ declare namespace JSX {
     'a-sky': any;
     'a-camera': any;
     'a-entity': any;
+    'a-ring': any;
+    'a-text': any;
     'a-cursor': any;
     'a-assets': any;
     'a-asset-item': any;

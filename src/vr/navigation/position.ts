@@ -9,3 +9,11 @@ export function hotspotPosition(yawDeg: number, pitchDeg: number): string {
   const z = -RADIUS * Math.cos(yaw) * Math.cos(pitch);
   return `${x.toFixed(2)} ${y.toFixed(2)} ${z.toFixed(2)}`;
 }
+
+/**
+ * Rotasi supaya ring hotspot menghadap kamera di titik pusat (pengganti
+ * komponen `look-at` di LFS). A-Frame memakai urutan Euler YXZ (derajat).
+ */
+export function hotspotRotation(yawDeg: number, pitchDeg: number): string {
+  return `${pitchDeg} ${-yawDeg} 0`;
+}

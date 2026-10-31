@@ -16,7 +16,7 @@ export default function AssessmentNavigation({
   onNext: () => void;
 }) {
   return (
-    <div className="mt-6 flex justify-between">
+    <div className="assess-nav">
       <Button variant="outline" onClick={onBack} disabled={!canGoBack}>
         Sebelumnya
       </Button>

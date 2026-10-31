@@ -1,9 +1,9 @@
-import Button from '@/components/Button';
 import type { MlDetection } from '@/types/api';
+import InfoPanel from '@/vr/hud/InfoPanel';
 
 /**
  * PRD #30: tampilkan hasil identifikasi dari backend sebelum materi.
- * Confidence boleh ditampilkan; latency sengaja tidak ditampilkan.
+ * Tampilan "Geometri Teridentifikasi" + bar confidence LFS. Latency tidak ditampilkan.
  */
 export default function PredictionResultOverlay({
   detection,
@@ -17,22 +17,31 @@ export default function PredictionResultOverlay({
   // Skala confidence belum didefinisikan di openapi.yaml; mock memakai 0..1.
   // Terima juga 0..100 supaya tidak tampil "9400%" bila backend beda skala.
   const raw = detection.confidence;
-  const confidencePct = Math.round(raw <= 1 ? raw * 100 : raw);
+  const pct = Math.max(0, Math.min(100, Math.round(raw <= 1 ? raw * 100 : raw)));
+  // Warna bar persis LFS (public/js/app.js showInfo).
+  const color = pct >= 93 ? '#00e676' : pct >= 87 ? '#ffd700' : '#ff7043';
+
   return (
-    <div className="absolute inset-x-0 bottom-24 z-20 flex justify-center px-4" role="status">
-      <div className="w-full max-w-sm rounded-2xl bg-white px-6 py-5 text-center shadow-xl">
-        <p className="text-sm font-medium text-slate-500">Objek Teridentifikasi</p>
-        <p className="mt-1 text-2xl font-extrabold uppercase tracking-wide text-brand-700">
-          {detection.label}
-        </p>
-        <p className="mt-1 text-sm text-slate-600">Keyakinan model: {confidencePct}%</p>
-        <div className="mt-4 flex justify-center gap-3">
-          <Button variant="outline" onClick={onClose}>
-            Tutup
-          </Button>
-          <Button onClick={onLearn}>Pelajari Bentuk</Button>
-        </div>
+    <InfoPanel label="Objek Teridentifikasi" onClose={onClose} role="status">
+      <div className="geo-name">{detection.label}</div>
+      <div className="geo-sub">Hasil identifikasi model</div>
+
+      <div className="conf-row" style={{ marginTop: 12 }}>
+        <span className="conf-title">Keyakinan Model</span>
+        <span className="conf-text">{pct}%</span>
       </div>
-    </div>
+      <div className="conf-bar" aria-hidden="true">
+        <div className="conf-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+
+      <div className="info-actions">
+        <button className="vr-secondary-btn" onClick={onClose}>
+          Tutup
+        </button>
+        <button className="vr-primary-btn" onClick={onLearn}>
+          Pelajari Bentuk
+        </button>
+      </div>
+    </InfoPanel>
   );
 }

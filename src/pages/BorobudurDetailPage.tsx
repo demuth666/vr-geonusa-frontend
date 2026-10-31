@@ -1,16 +1,15 @@
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import Button from '@/components/Button';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
 import { useHeritageSite } from '@/features/heritage/hooks';
+import { CheckIcon, GlobeIcon, LayersIcon, MapPinIcon, PlayIcon, SearchIcon } from '@/components/icons';
 
 /**
  * Route publik /destinations/:slug. CTA "Mulai Eksplorasi" mengarah ke
  * /app/borobudur/intro (protected). Pengecekan auth dilakukan oleh
- * ProtectedRoute, bukan di sini (PRD #15) — kalau belum login, ProtectedRoute
- * yang mengarahkan ke /login sambil menyimpan tujuan semula.
+ * ProtectedRoute, bukan di sini (PRD #15).
  */
 export default function BorobudurDetailPage() {
   const { slug = 'borobudur' } = useParams();
@@ -18,57 +17,114 @@ export default function BorobudurDetailPage() {
 
   if (siteQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="center-screen">
         <Spinner label="Memuat destinasi..." />
       </div>
     );
   }
   if (siteQuery.isError || !siteQuery.data) {
     return (
-      <div className="mx-auto max-w-md px-4 py-20">
-        <ErrorState error={siteQuery.error} onRetry={() => siteQuery.refetch()} />
+      <div className="center-screen">
+        <div style={{ width: 'min(420px, 100%)' }}>
+          <ErrorState error={siteQuery.error} onRetry={() => siteQuery.refetch()} />
+        </div>
       </div>
     );
   }
 
   const site = siteQuery.data;
+  const available = site.status === 'available';
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="page">
+      <div className="blob-bg" aria-hidden="true" />
       <Navbar />
-      <img src={site.cover_image_url} alt={site.name} className="aspect-[21/9] w-full object-cover" />
-      <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-3xl font-bold text-slate-900">{site.name}</h1>
-        <p className="mt-1 text-slate-500">{site.location}</p>
-        <p className="mt-4 text-slate-700">{site.description}</p>
+      <main className="page-main">
+        <section className="section detail-hero">
+          <div className="detail-grid">
+            <div>
+              <div className={`bento-status ${available ? 'status-live' : 'status-soon'}`}>
+                <GlobeIcon />
+                {available ? 'Foto 360 Aktif' : 'Segera Hadir'}
+              </div>
+              <h1 className="hero-h1">{site.name}</h1>
+              <div className="section-kicker" style={{ color: 'var(--text-2)', textTransform: 'none', letterSpacing: 0 }}>
+                <MapPinIcon />
+                {site.location}
+              </div>
+              <p className="hero-sub" style={{ maxWidth: 560, marginBottom: 0 }}>
+                {site.description}
+              </p>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <div>
-            <h2 className="font-bold text-slate-900">Tujuan Pembelajaran</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
-              {site.learning_objectives.map((o, i) => (
-                <li key={i}>{o}</li>
-              ))}
-            </ul>
+              <div className="detail-meta">
+                <div className="hero-stat">
+                  <div className="hero-stat-ico ico-sky">
+                    <SearchIcon />
+                  </div>
+                  <div>
+                    <span className="hero-stat-num">{site.available_areas_count}</span>
+                    <span className="hero-stat-lbl">Area Panorama</span>
+                  </div>
+                </div>
+                <div className="hero-stat">
+                  <div className="hero-stat-ico ico-amber">
+                    <LayersIcon />
+                  </div>
+                  <div>
+                    <span className="hero-stat-num">360°</span>
+                    <span className="hero-stat-lbl">Foto Panorama</span>
+                  </div>
+                </div>
+              </div>
+
+              {available && (
+                <Link to="/app/borobudur/intro" className="btn btn-primary">
+                  <PlayIcon />
+                  Mulai Eksplorasi
+                </Link>
+              )}
+            </div>
+
+            <div className="detail-photo">
+              <img src={site.cover_image_url} alt={site.name} />
+              <div className="hero-card-photo-overlay" />
+            </div>
           </div>
-          <div>
-            <h2 className="font-bold text-slate-900">Fitur Pengalaman</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
-              {site.experience_features.map((f, i) => (
-                <li key={i}>{f}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        </section>
 
-        <p className="mt-6 text-sm text-slate-500">
-          {site.available_areas_count} area panorama tersedia untuk dijelajahi.
-        </p>
-
-        <Link to="/app/borobudur/intro" className="mt-8 inline-block">
-          <Button>Mulai Eksplorasi</Button>
-        </Link>
-      </div>
+        {(site.learning_objectives.length > 0 || site.experience_features.length > 0) && (
+          <section className="section section-alt">
+            <div className="detail-lists">
+              <div className="step-card detail-list">
+                <div className="step-title">
+                  <span className="step-num" style={{ margin: 0 }}>
+                    <CheckIcon />
+                  </span>
+                  Tujuan Pembelajaran
+                </div>
+                <ul>
+                  {site.learning_objectives.map((o, i) => (
+                    <li key={i}>{o}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="step-card detail-list sky">
+                <div className="step-title">
+                  <span className="step-num" style={{ margin: 0, background: 'var(--sky-soft)', color: 'var(--sky)' }}>
+                    <GlobeIcon />
+                  </span>
+                  Fitur Pengalaman
+                </div>
+                <ul>
+                  {site.experience_features.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
       <Footer />
     </div>
   );

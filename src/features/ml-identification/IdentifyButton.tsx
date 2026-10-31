@@ -1,20 +1,15 @@
-import Button from '@/components/Button';
+import { SearchIcon } from '@/components/icons';
 
-export default function IdentifyButton({
-  onClick,
-  pending,
-}: {
-  onClick: () => void;
-  pending: boolean;
-}) {
+export default function IdentifyButton({ onClick, pending }: { onClick: () => void; pending: boolean }) {
   return (
-    <Button
+    <button
+      id="identify-btn"
       onClick={onClick}
       disabled={pending}
-      className="absolute bottom-6 right-6 z-20 shadow-lg"
       aria-label="Identifikasi objek pada pandangan saat ini"
     >
+      <SearchIcon />
       {pending ? 'Mengidentifikasi…' : 'Identifikasi'}
-    </Button>
+    </button>
   );
 }

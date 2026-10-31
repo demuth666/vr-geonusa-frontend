@@ -12,20 +12,10 @@ export default function AssessmentOptions({
   onChange: (optionId: string) => void;
 }) {
   return (
-    <div className="space-y-2" role="radiogroup" aria-label="Pilihan jawaban">
+    <div className="assess-options" role="radiogroup" aria-label="Pilihan jawaban">
       {options.map((opt) => (
-        <label
-          key={opt.id}
-          className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-sm transition ${
-            value === opt.id ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <input
-            type="radio"
-            name={name}
-            checked={value === opt.id}
-            onChange={() => onChange(opt.id)}
-          />
+        <label key={opt.id} className={`assess-option${value === opt.id ? ' is-selected' : ''}`}>
+          <input type="radio" name={name} checked={value === opt.id} onChange={() => onChange(opt.id)} />
           {opt.text}
         </label>
       ))}

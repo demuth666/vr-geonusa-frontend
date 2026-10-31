@@ -7,7 +7,7 @@ import {
   useSessionProgress,
   useCompleteExploration,
 } from '@/features/learning-session/hooks';
-import { useHeritageAreas, usePanoramaNode } from '@/features/heritage/hooks';
+import { useHeritageAreas, useHeritageSite, usePanoramaNode } from '@/features/heritage/hooks';
 import { useUiStore } from '@/store/uiStore';
 import { sessionPhaseToPath } from '@/utils/session-routing';
 import { captureViewport } from '@/vr/ml/capture';
@@ -30,6 +30,8 @@ function ExploreContent({ session }: { session: LearningSession }) {
   const navigate = useNavigate();
 
   const areasQuery = useHeritageAreas('borobudur');
+  const siteQuery = useHeritageSite('borobudur');
+  const [hintVisible, setHintVisible] = useState(true);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(
     session.current_panorama_node_id
   );
@@ -62,6 +64,12 @@ function ExploreContent({ session }: { session: LearningSession }) {
   }, [areasQuery.data, currentNodeId]);
 
   const nodeQuery = usePanoramaNode(currentNodeId);
+
+  // LFS: petunjuk kontrol hilang otomatis setelah 8 detik.
+  useEffect(() => {
+    const t = setTimeout(() => setHintVisible(false), 8000);
+    return () => clearTimeout(t);
+  }, []);
   usePreloadNeighborPanoramas(nodeQuery.data);
 
   const handleSceneRef = useCallback((sceneEl: any, cameraEl: any) => {
@@ -111,37 +119,54 @@ function ExploreContent({ session }: { session: LearningSession }) {
 
   if (areasQuery.isLoading || !currentNodeId || nodeQuery.isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900">
-        <Spinner label="Menyiapkan eksplorasi..." />
+      <div className="vr-stage" style={{ display: 'grid', placeItems: 'center' }}>
+        <Spinner onDark label="Menyiapkan eksplorasi..." />
       </div>
     );
   }
   if (areasQuery.isError) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900 px-4">
+      <div className="vr-stage" style={{ display: 'grid', placeItems: 'center', padding: 16 }}>
         <ErrorState error={areasQuery.error} onRetry={() => areasQuery.refetch()} />
       </div>
     );
   }
   if (nodeQuery.isError || !nodeQuery.data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-900 px-4">
+      <div className="vr-stage" style={{ display: 'grid', placeItems: 'center', padding: 16 }}>
         <ErrorState error={nodeQuery.error} onRetry={() => nodeQuery.refetch()} />
       </div>
     );
   }
 
   const progress = progressQuery.data;
+  const node = nodeQuery.data;
+  const area = areasQuery.data?.find((a) => a.panorama_node_ids.includes(node.id));
+  const nodeIndex = area ? area.panorama_node_ids.indexOf(node.id) + 1 : null;
+  const site = siteQuery.data;
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-slate-900">
-      {/* Top bar */}
-      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent px-4 py-3 text-white">
-        <span className="font-semibold">Borobudur</span>
+    <div className="vr-stage">
+      <PanoramaScene node={node} onNavigate={handleNavigate} onSceneRef={handleSceneRef} />
+
+      {/* ── HUD kiri atas (LFS #hud) ── */}
+      <div id="hud" style={{ display: 'block' }}>
+        <div id="hud-scene">
+          <span className="hud-green-dot" aria-hidden="true" />
+          <div>
+            <div className="hud-label">VR-GeoNusa · Tur 360°</div>
+            <div className="hud-name">{site?.name ?? 'Borobudur'}</div>
+            <div className="hud-loc">{site?.location ?? 'Magelang, Jawa Tengah'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Kanan atas: progress (dari backend) + selesai ── */}
+      <div className="tour-chip">
         {progress && <ProgressBar percentage={progress.percentage} />}
         <button
+          className="tour-finish-btn"
           aria-label="Selesaikan eksplorasi"
-          className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
           disabled={!progress?.can_finish}
           onClick={() => setOverlay('finish-confirm')}
         >
@@ -149,14 +174,29 @@ function ExploreContent({ session }: { session: LearningSession }) {
         </button>
       </div>
 
-      <PanoramaScene node={nodeQuery.data} onNavigate={handleNavigate} onSceneRef={handleSceneRef} />
+      {/* ── Panel area kiri bawah (LFS #tour-panel) ── */}
+      <div id="tour-panel">
+        <div className="tour-area-label">Area Saat Ini</div>
+        <div className="tour-area-name">{node.name}</div>
+        <div className="tour-area-pos">
+          {area?.name ?? ''}
+          {nodeIndex && area ? ` · Titik ${nodeIndex} dari ${area.panorama_node_ids.length}` : ''}
+        </div>
+        <div className="tour-area-desc">
+          Klik lingkaran untuk berpindah titik, lalu tekan Identifikasi saat melihat bagian candi.
+        </div>
+      </div>
+
+      {/* ── Petunjuk kontrol (LFS #controls-hint) ── */}
+      <div id="controls-hint" className={hintVisible ? '' : 'hidden'}>
+        Geser mouse / layar untuk melihat sekeliling &nbsp;·&nbsp; klik atau tatap lingkaran untuk berpindah
+        &nbsp;·&nbsp; ikon VR untuk mode headset
+      </div>
 
       {overlay === 'none' && <IdentifyButton onClick={handleIdentify} pending={predict.isPending} />}
       {overlay === 'identifying' && <IdentifyingOverlay />}
       {overlay === 'no-detection' && <NoDetectionOverlay onClose={() => setOverlay('none')} />}
-      {overlay === 'ml-error' && (
-        <MlErrorOverlay onRetry={handleIdentify} onClose={() => setOverlay('none')} />
-      )}
+      {overlay === 'ml-error' && <MlErrorOverlay onRetry={handleIdentify} onClose={() => setOverlay('none')} />}
       {overlay === 'prediction' && detection && (
         <PredictionResultOverlay
           detection={detection}
@@ -189,12 +229,15 @@ function ExploreContent({ session }: { session: LearningSession }) {
         />
       )}
       {completeExploration.isError && (
-        <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center px-4">
-          <div className="w-full max-w-sm">
-            <ErrorState error={completeExploration.error} />
-          </div>
+        <div className="vr-toast">
+          <ErrorState error={completeExploration.error} />
         </div>
       )}
+
+      {/* ── Kembali ke portal (LFS #scene-btn). Sesi tetap tersimpan di backend. ── */}
+      <button id="scene-btn" className="is-visible" onClick={() => navigate('/')}>
+        ← Portal
+      </button>
     </div>
   );
 }

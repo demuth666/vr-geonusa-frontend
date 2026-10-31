@@ -1,17 +1,17 @@
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import TeamSection from '@/features/landing/TeamSection';
+import { useReveal } from '@/hooks/useReveal';
 
-/** PRD #11: route publik /team. */
+/** PRD #11: route publik /team — seksi Tim Peneliti LFS. */
 export default function TeamPage() {
+  useReveal();
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="page">
+      <div className="blob-bg" aria-hidden="true" />
       <Navbar />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-14 text-center">
-        <h1 className="text-3xl font-bold text-slate-900">Tim VR-GeoNusa</h1>
-        <p className="mt-4 text-slate-600">
-          Dikembangkan oleh tim peneliti, dosen, dan mahasiswa yang berfokus pada pembelajaran
-          geometri berbasis teknologi immersive.
-        </p>
+      <main className="page-main">
+        <TeamSection headingLevel="h1" />
       </main>
       <Footer />
     </div>

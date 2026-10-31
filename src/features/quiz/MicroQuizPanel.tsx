@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useQuiz, useStartQuizAttempt, useAnswerQuizQuestion, useSubmitQuizAttempt } from './hooks';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
-import Button from '@/components/Button';
 import type { QuizAnswerResult } from '@/types/api';
 
 /**
  * Berbeda dari pretest/posttest: micro quiz BOLEH langsung menampilkan
  * benar/salah + feedback dari backend (PRD #36). Frontend tidak pernah
- * menghitung sendiri correctness-nya.
+ * menghitung sendiri correctness-nya — hanya pilihan siswa yang diberi
+ * warna, sesuai `is_correct` dari server. Tampilan: kuis LFS.
  */
 export default function MicroQuizPanel({
   sessionId,
@@ -31,19 +31,23 @@ export default function MicroQuizPanel({
 
   useEffect(() => {
     if (quizQuery.data && !attemptId) {
-      startAttempt.mutate(
-        { sessionId, quizId },
-        { onSuccess: (attempt) => setAttemptId(attempt.id) }
-      );
+      startAttempt.mutate({ sessionId, quizId }, { onSuccess: (attempt) => setAttemptId(attempt.id) });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizQuery.data]);
 
-  if (quizQuery.isLoading || !attemptId) {
-    return <Spinner label="Memuat kuis singkat..." />;
-  }
   if (quizQuery.isError) {
     return <ErrorState error={quizQuery.error} onRetry={() => quizQuery.refetch()} />;
+  }
+  if (startAttempt.isError) {
+    return <ErrorState error={startAttempt.error} onRetry={() => startAttempt.mutate({ sessionId, quizId }, { onSuccess: (a) => setAttemptId(a.id) })} />;
+  }
+  if (quizQuery.isLoading || !attemptId) {
+    return (
+      <div className="info-spinner">
+        <Spinner label="Memuat kuis singkat..." />
+      </div>
+    );
   }
 
   const quiz = quizQuery.data!;
@@ -68,19 +72,20 @@ export default function MicroQuizPanel({
     }
   }
 
-  return (
-    <div className="space-y-4">
-      <p className="text-sm font-semibold text-brand-700">{quiz.title}</p>
-      <p className="font-medium text-slate-800">{question.prompt}</p>
+  function optionClass(optId: string) {
+    if (selected !== optId) return 'quiz-option';
+    if (!result) return 'quiz-option is-selected';
+    return `quiz-option ${result.is_correct ? 'correct' : 'wrong'}`;
+  }
 
-      <div className="space-y-2">
+  return (
+    <div>
+      <div className="quiz-title">{quiz.title}</div>
+      <div className="quiz-question">{question.prompt}</div>
+
+      <div className="quiz-options">
         {question.options.map((opt) => (
-          <label
-            key={opt.id}
-            className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-sm ${
-              selected === opt.id ? 'border-brand-600 bg-brand-50' : 'border-slate-200'
-            }`}
-          >
+          <label key={opt.id} className={optionClass(opt.id)}>
             <input
               type="radio"
               name={question.id}
@@ -94,25 +99,26 @@ export default function MicroQuizPanel({
       </div>
 
       {result && (
-        <div
-          className={`rounded-lg px-4 py-3 text-sm ${
-            result.is_correct ? 'bg-brand-50 text-brand-800' : 'bg-amber-50 text-amber-800'
-          }`}
-          role="status"
-        >
-          <p className="font-semibold">{result.is_correct ? 'Benar ✓' : 'Belum tepat.'}</p>
+        <div className={`quiz-feedback ${result.is_correct ? 'correct' : 'wrong'}`} role="status">
+          <p className="fb-title">{result.is_correct ? 'Benar ✓' : 'Belum tepat.'}</p>
           <p>{result.feedback}</p>
         </div>
       )}
 
+      {answerMutation.isError && (
+        <div style={{ marginTop: 10 }}>
+          <ErrorState error={answerMutation.error} />
+        </div>
+      )}
+
       {!result ? (
-        <Button onClick={handleAnswer} disabled={!selected || answerMutation.isPending}>
+        <button className="vr-primary-btn mt" onClick={handleAnswer} disabled={!selected || answerMutation.isPending}>
           Jawab
-        </Button>
+        </button>
       ) : (
-        <Button onClick={handleNext} disabled={submitMutation.isPending}>
+        <button className="vr-primary-btn mt" onClick={handleNext} disabled={submitMutation.isPending}>
           {isLastQuestion ? 'Selesai' : 'Lanjut'}
-        </Button>
+        </button>
       )}
     </div>
   );

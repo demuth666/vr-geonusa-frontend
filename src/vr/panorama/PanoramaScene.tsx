@@ -84,10 +84,13 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
   }, [setLastCamera]);
 
   return (
-    <div ref={wrapperRef} className="relative h-full w-full bg-slate-900">
+    <div ref={wrapperRef} className="vr-stage">
+      {/* Loading texture: #loading-bar + #tour-fade LFS (vr.css). */}
+      <div id="loading-bar" className={textureLoaded ? '' : 'is-loading'} aria-hidden="true" />
+      <div id="tour-fade" className={textureLoaded ? '' : 'active'} aria-hidden="true" />
       {!textureLoaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900">
-          <Spinner label="Memuat panorama..." />
+        <div className="tour-loading-label">
+          <Spinner onDark label="Memuat panorama..." />
         </div>
       )}
       {/* key={node.id}: pastikan A-Frame scene benar2 reinit tiap pindah node
@@ -97,7 +100,7 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
         key={node.id}
         ref={sceneRef}
         embedded
-        renderer="preserveDrawingBuffer: true; antialias: true"
+        renderer="colorManagement: true; preserveDrawingBuffer: true; antialias: true"
         vr-mode-ui="enabled: true"
         loading-screen="enabled: false"
         style={{ width: '100%', height: '100%' }}
@@ -106,13 +109,18 @@ export default function PanoramaScene({ node, onNavigate, onSceneRef }: Props) {
         <a-camera
           ref={cameraRef}
           rotation={`${node.initial_pitch} ${node.initial_yaw} 0`}
-          look-controls="reverseMouseDrag: false"
+          look-controls="pointerLockEnabled: false; reverseMouseDrag: false"
+          wasd-controls="enabled: false"
         >
+          {/* Kursor gaze LFS: cyan, fuse 1 detik (bisa dipakai di headset tanpa controller). */}
           <a-cursor
-            fuse={false}
-            raycaster="objects: .clickable"
-            geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.02"
-            material="color: #FFFFFF; shader: flat"
+            fuse="true"
+            fuse-timeout="1000"
+            color="#00e5ff"
+            opacity="0.8"
+            raycaster="objects: .clickable; far: 25"
+            animation__fusing="property: scale; from: 1 1 1; to: 0.5 0.5 0.5; dur: 1000; startEvents: fusing"
+            animation__defuse="property: scale; to: 1 1 1; dur: 200; startEvents: mouseleave"
           />
         </a-camera>
         {node.hotspots.map((h) => (
