@@ -1,0 +1,252 @@
+openapi: 3.0.3
+info:
+  title: VR-GeoNusa API (provisional — frontend working contract)
+  version: "0.1.0-provisional"
+  description: >
+    PENTING: file ini BUKAN kontrak resmi dari Backend/ML Team.
+    Backend belum membagikan contracts/openapi.yaml yang sesungguhnya saat
+    frontend V1 ini dikerjakan. File ini ditulis frontend sebagai
+    "typed mock" sementara, murni diturunkan dari bentuk payload yang
+    dideskripsikan di PRD (section 21, 25, 28, 30, 37, 42). Begitu backend
+    merilis openapi.yaml resmi, GANTI file ini dan sesuaikan
+    src/types/api.ts + src/api/mock/* mengikuti PRD #53 (mock → real API).
+    Jangan jadikan file ini sumber kebenaran permanen.
+servers:
+  - url: /api/v1
+paths:
+  /heritage-sites:
+    get:
+      summary: List heritage sites (public)
+      responses:
+        "200":
+          description: OK
+  /heritage-sites/{slug}:
+    get:
+      summary: Heritage site detail (public)
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+  /heritage-sites/{slug}/areas:
+    get:
+      summary: Areas belonging to a heritage site
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+  /panorama-nodes/{id}:
+    get:
+      summary: Panorama node metadata (asset, initial view, navigation links)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+  /auth/login:
+    post:
+      summary: Student login. Backend sets secure session cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: OK }
+        "401": { description: Invalid credentials }
+  /auth/logout:
+    post:
+      summary: Logout, invalidates session cookie
+      responses:
+        "204": { description: No Content }
+  /me:
+    get:
+      summary: Current authenticated student (source of truth for auth state)
+      responses:
+        "200": { description: OK }
+        "401": { description: Not authenticated }
+  /me/learning-sessions/active:
+    get:
+      summary: Active (unfinished) learning session for current student, if any
+      responses:
+        "200": { description: OK — session or null }
+        "401": { description: Not authenticated }
+  /learning-sessions:
+    post:
+      summary: Create a new learning session for a heritage site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [heritage_site_id]
+              properties:
+                heritage_site_id: { type: string }
+      responses:
+        "201": { description: Created — includes X-Learning-Session-Token-bearing session }
+  /learning-sessions/{id}:
+    get:
+      summary: Learning session detail (phase, next_step, current_panorama_node_id)
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+        "403": { description: Not owner of session }
+        "404": { description: Not found }
+  /learning-sessions/{id}/progress:
+    get:
+      summary: Session progress (percentage, requirements, can_finish)
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/panorama-visits:
+    post:
+      summary: Notify backend of a panorama node visit
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [panorama_node_id]
+              properties:
+                panorama_node_id: { type: string }
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/ml-predictions:
+    post:
+      summary: >
+        Submit a viewport capture for geometry identification. Frontend NEVER
+        calls the ML/FastAPI service directly — always via this Laravel route.
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [panorama_node_id, camera_yaw, camera_pitch, camera_fov, image]
+              properties:
+                panorama_node_id: { type: string }
+                camera_yaw: { type: number }
+                camera_pitch: { type: number }
+                camera_fov: { type: number }
+                image: { type: string, description: base64 data URL of viewport capture }
+      responses:
+        "200": { description: OK — prediction result or empty detections }
+        "503": { description: ML temporarily unavailable }
+  /heritage-objects/{id}/learning-material:
+    get:
+      summary: Learning material for an identified heritage object
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/materials/{objectId}/viewed:
+    post:
+      summary: Mark a learning material as viewed
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: path, name: objectId, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+  /quizzes/{id}:
+    get:
+      summary: Micro quiz question set (no correctness included)
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/quiz-attempts:
+    post:
+      summary: Start a micro quiz attempt
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "201": { description: Created }
+  /quiz-attempts/{attemptId}/answers/{questionId}:
+    put:
+      summary: Submit/replace answer for one micro quiz question
+      parameters:
+        - { in: path, name: attemptId, required: true, schema: { type: string } }
+        - { in: path, name: questionId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [selected_option_id]
+              properties:
+                selected_option_id: { type: string }
+      responses:
+        "200": { description: OK — includes is_correct + feedback (micro quiz only) }
+  /quiz-attempts/{attemptId}/submit:
+    post:
+      summary: Finalize micro quiz attempt
+      parameters: [{ in: path, name: attemptId, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/assessment-attempts:
+    post:
+      summary: Start a pretest/posttest/self-efficacy attempt
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instrument]
+              properties:
+                instrument: { type: string, enum: [pretest, posttest, self_efficacy] }
+      responses:
+        "201": { description: Created }
+  /assessment-attempts/{id}:
+    get:
+      summary: Assessment attempt detail (items, no correct answers ever)
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /assessment-attempts/{attemptId}/answers/{itemId}:
+    put:
+      summary: Submit/replace answer for one assessment item (no correctness returned)
+      parameters:
+        - { in: path, name: attemptId, required: true, schema: { type: string } }
+        - { in: path, name: itemId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [selected_option_id]
+              properties:
+                selected_option_id: { type: string }
+      responses:
+        "200": { description: OK }
+  /assessment-attempts/{attemptId}/submit:
+    post:
+      summary: Finalize assessment attempt. Score computed server-side, never returned raw to student unless product requires it.
+      parameters: [{ in: path, name: attemptId, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
+  /learning-sessions/{id}/exploration/complete:
+    post:
+      summary: Request to finish exploration. Backend re-validates can_finish.
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK — new phase }
+        "409": { description: Requirements not met }
+  /learning-sessions/{id}/result:
+    get:
+      summary: Final session result summary
+      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: OK }
