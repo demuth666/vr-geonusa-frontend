@@ -10,8 +10,8 @@ vi.mock('@/api/mock/db', async (importOriginal) => {
   return { ...actual, delay: () => Promise.resolve() };
 });
 
-// A-Frame/WebGL tidak jalan di jsdom. Ganti scene dengan stub yang tetap
-// merender hotspot DARI DATA API, supaya navigasi bisa diuji.
+// A-Frame/WebGL tidak jalan di jsdom. Ganti scene dengan stub; navigasi diuji
+// lewat tombol hotspot HTML di ExplorePage (padanan keyboard, PRD #49).
 vi.mock('@/vr/panorama/PanoramaScene', async () => {
   const React = await import('react');
   return {
@@ -31,13 +31,8 @@ vi.mock('@/vr/panorama/PanoramaScene', async () => {
         };
         onSceneRef?.({ canvas: undefined }, camera);
       }, [node.id, onSceneRef]);
-      return React.createElement(
-        'div',
-        { 'data-testid': 'panorama', 'data-node-id': node.id },
-        node.hotspots.map((h) =>
-          React.createElement('button', { key: h.id, onClick: () => onNavigate(h.target_node_id) }, h.label)
-        )
-      );
+      void onNavigate;
+      return React.createElement('div', { 'data-testid': 'panorama', 'data-node-id': node.id });
     },
   };
 });

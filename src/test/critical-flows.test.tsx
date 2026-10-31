@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,6 +16,7 @@ import {
 import * as mockSessionApi from '@/api/mock/learning-session';
 import * as mockQuizApi from '@/api/mock/quiz';
 import { ApiError } from '@/api/error';
+import { getSessionWriteToken } from '@/api/session-token';
 import { hotspotPosition } from '@/vr/navigation/position';
 import MicroQuizPanel from '@/features/quiz/MicroQuizPanel';
 import { MOCK_HERITAGE_OBJECT_ID, MOCK_MICRO_QUIZ } from '@/api/mock/data';
@@ -220,5 +221,41 @@ describe('PRD #55 critical frontend tests', () => {
     expect(await screen.findByRole('heading', { name: 'Eksplorasi Selesai' })).toBeTruthy();
     expect(screen.getByText('Panorama dikunjungi')).toBeTruthy();
     expect(screen.queryByText(/pretest|posttest|skor|score/i)).toBeNull();
+  });
+
+  it('restores session write token after page refresh (PRD #20)', async () => {
+    const s = authedSession('exploration');
+    // setup.ts mengosongkan token -> sama seperti refresh browser.
+    expect(getSessionWriteToken()).toBeNull();
+    renderApp(`${base(s.id)}/explore`);
+    await screen.findByTestId('panorama');
+    expect(getSessionWriteToken()).toBe(s.write_token);
+  });
+
+  it('401 in the middle of a session redirects to login (PRD #43)', async () => {
+    vi.mocked(mockSessionApi.predictGeometry).mockRejectedValueOnce(
+      new ApiError(401, 'not_authenticated', 'Not authenticated')
+    );
+    const user = userEvent.setup();
+    const s = authedSession('exploration');
+    const { location } = renderApp(`${base(s.id)}/explore`);
+    await screen.findByTestId('panorama');
+    await user.click(screen.getByRole('button', { name: 'Identifikasi objek pada pandangan saat ini' }));
+    await waitFor(() => expect(location.pathname).toBe('/login'));
+    expect(getSessionWriteToken()).toBeNull();
+  });
+
+  it('hotspot navigation is keyboard accessible (PRD #49)', async () => {
+    const user = userEvent.setup();
+    const s = authedSession('exploration');
+    renderApp(`${base(s.id)}/explore`);
+    await screen.findByTestId('panorama');
+    const nav = screen.getByRole('navigation', { name: 'Pindah titik panorama' });
+    const maju = within(nav).getByRole('button', { name: 'Maju' });
+    maju.focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(screen.getByTestId('panorama').getAttribute('data-node-id')).toBe('node-2')
+    );
   });
 });

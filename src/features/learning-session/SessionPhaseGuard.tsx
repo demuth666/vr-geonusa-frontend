@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useSession } from './hooks';
+import { useActiveSession, useSession } from './hooks';
 import type { LearningSession, SessionPhase } from '@/types/api';
 import { sessionPhaseToPath } from '@/utils/session-routing';
 import Spinner from '@/components/Spinner';
@@ -23,8 +23,13 @@ export default function SessionPhaseGuard({
   children: (session: LearningSession) => React.ReactNode;
 }) {
   const { data: session, isLoading, isError, error, refetch } = useSession(sessionId);
+  // PRD #20: write token hanya di memory, jadi hilang saat halaman di-refresh.
+  // GET /me/learning-sessions/active mengembalikan token lagi (diterapkan di
+  // useActiveSession) — tunggu itu dulu sebelum halaman sesi melakukan mutasi.
+  // Sesi `completed` tidak lagi aktif dan tidak butuh token (halaman result read-only).
+  const activeQuery = useActiveSession();
 
-  if (isLoading) {
+  if (isLoading || activeQuery.isLoading) {
     return (
       <div className="center-screen">
         <Spinner label="Memuat sesi..." />

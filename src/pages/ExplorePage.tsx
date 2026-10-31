@@ -185,6 +185,21 @@ function ExploreContent({ session }: { session: LearningSession }) {
         <div className="tour-area-desc">
           Klik lingkaran untuk berpindah titik, lalu tekan Identifikasi saat melihat bagian candi.
         </div>
+        {/* PRD #49: padanan non-VR & keyboard untuk hotspot di scene — data sama dari API. */}
+        {node.hotspots.length > 0 && (
+          <nav className="tour-nav" aria-label="Pindah titik panorama">
+            {node.hotspots.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                className="tour-nav-btn"
+                onClick={() => handleNavigate(h.target_node_id)}
+              >
+                {h.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
 
       {/* ── Petunjuk kontrol (LFS #controls-hint) ── */}

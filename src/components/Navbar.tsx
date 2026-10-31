@@ -36,6 +36,7 @@ export default function Navbar() {
         </span>
       </Link>
       <nav className="nav-links" aria-label="Navigasi utama">
+        <Link to="/#tentang">Tentang</Link>
         <Link to="/#destinasi">Destinasi</Link>
         <Link to="/#cara-main">Cara Main</Link>
         <Link to="/#geometri">Bangun Ruang</Link>
@@ -71,6 +72,7 @@ export default function Navbar() {
       </button>
       {menuOpen && (
         <nav id="nav-mobile" className="nav-mobile" aria-label="Navigasi utama (mobile)">
+          <Link to="/#tentang">Tentang</Link>
           <Link to="/#destinasi">Destinasi</Link>
           <Link to="/#cara-main">Cara Main</Link>
           <Link to="/#geometri">Bangun Ruang</Link>

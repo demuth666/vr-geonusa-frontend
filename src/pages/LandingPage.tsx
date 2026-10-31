@@ -9,6 +9,8 @@ import DestinationBento from '@/features/landing/DestinationBento';
 import HowToPlay from '@/features/landing/HowToPlay';
 import GeometryGallery from '@/features/landing/GeometryGallery';
 import TeamSection from '@/features/landing/TeamSection';
+import AboutSection from '@/features/landing/AboutSection';
+import ResearchSection from '@/features/landing/ResearchSection';
 import { useReveal } from '@/hooks/useReveal';
 import {
   BookIcon,
@@ -22,7 +24,8 @@ import {
 } from '@/components/icons';
 
 /**
- * Landing page — desain & isi dari VR-GeoNusa LFS (public/index.html).
+ * Landing page — desain & isi dari VR-GeoNusa LFS (public/index.html), plus
+ * seksi About & Research yang direkomendasikan PRD #13.
  * Data destinasi dari GET /heritage-sites (PRD #13), sisanya konten statis.
  */
 export default function LandingPage() {
@@ -138,6 +141,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <AboutSection />
+
       {/* ═══ DESTINASI ═══ */}
       <section id="destinasi" className="section section-alt" aria-labelledby="dest-h2">
         <div className="section-head reveal">
@@ -169,6 +174,7 @@ export default function LandingPage() {
 
       <HowToPlay />
       <GeometryGallery />
+      <ResearchSection />
       <TeamSection />
 
       <Footer />

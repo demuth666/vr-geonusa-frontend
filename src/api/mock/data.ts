@@ -51,19 +51,6 @@ export const MOCK_HERITAGE_SITES: HeritageSite[] = [
     available_areas_count: 0,
     status: 'coming_soon',
   },
-  {
-    id: 'site-keraton-yogyakarta',
-    slug: 'keraton-yogyakarta',
-    name: 'Keraton Yogyakarta',
-    location: 'Yogyakarta',
-    cover_image_url: '/assets/images/keratonyogya.jpg',
-    short_description: 'Dalam pengembangan — Tahun ke-2',
-    description: 'Pengalaman Keraton Yogyakarta sedang dalam pengembangan dan belum tersedia pada V1.',
-    learning_objectives: [],
-    experience_features: [],
-    available_areas_count: 0,
-    status: 'coming_soon',
-  },
 ];
 
 /**

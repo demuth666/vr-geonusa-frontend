@@ -12,7 +12,7 @@ export default function DestinationBento({ sites }: { sites: HeritageSite[] }) {
   const others = sites.filter((s) => s !== primary);
 
   return (
-    <div className="bento">
+    <div className={`bento${others.length === 1 ? ' has-2' : ''}`}>
       {primary && (
         <Link
           to={`/destinations/${primary.slug}`}
@@ -40,7 +40,7 @@ export default function DestinationBento({ sites }: { sites: HeritageSite[] }) {
       )}
 
       {others.map((site) => (
-        <div key={site.id} className="bento-card bento-soon" aria-label={`${site.name} — segera hadir`}>
+        <div key={site.id} className={`bento-card bento-soon${others.length === 1 ? ' bento-tall' : ''}`} aria-label={`${site.name} — segera hadir`}>
           <img className="bento-img" src={site.cover_image_url} alt={site.name} />
           <div className="bento-overlay" aria-hidden="true" />
           <div className="bento-tile-body">

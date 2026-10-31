@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import AuthExpiryWatcher from '@/features/auth/AuthExpiryWatcher';
 
 /**
  * Layout akar. Halaman publik & protected masing-masing sudah membawa
@@ -7,5 +8,10 @@ import { Outlet } from 'react-router-dom';
  * menambahkan error boundary global atau toast provider di masa depan.
  */
 export default function RootLayout() {
-  return <Outlet />;
+  return (
+    <>
+      <AuthExpiryWatcher />
+      <Outlet />
+    </>
+  );
 }
