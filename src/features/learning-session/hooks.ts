@@ -13,7 +13,11 @@ export function useActiveSession() {
     queryKey: ['learning-sessions', 'active'],
     queryFn: async () => {
       const session = await api.getActiveSession();
-      if (session) applySessionToken(session);
+      if (session) {
+        applySessionToken(session);
+      } else {
+        setSessionWriteToken(null);
+      }
       return session;
     },
   });
@@ -22,7 +26,7 @@ export function useActiveSession() {
 export function useCreateSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (heritageSiteId: string) => api.createSession(heritageSiteId),
+    mutationFn: (respondentCode: string) => api.createSession(respondentCode),
     onSuccess: (session) => {
       applySessionToken(session);
       qc.setQueryData(['learning-sessions', 'active'], session);

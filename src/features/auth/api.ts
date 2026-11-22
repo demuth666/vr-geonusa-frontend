@@ -1,20 +1,37 @@
 import { isMock } from '@/api/mode';
-import { ensureCsrfCookie, http } from '@/api/client';
+import { http } from '@/api/client';
+import { clearAuthToken, getAuthToken, setAuthToken } from '@/api/auth-token';
+import { ApiError } from '@/api/error';
+import { mapStudentProfile } from '@/api/adapters';
+import type { BackendAuthenticatedStudent, BackendLoginData } from '@/api/backend-types';
 import * as mock from '@/api/mock/auth';
 import type { StudentProfile } from '@/types/api';
 
-export async function login(identifier: string, password: string): Promise<StudentProfile> {
-  if (isMock) return mock.login(identifier, password);
-  await ensureCsrfCookie();
-  return http<StudentProfile>('POST', '/auth/login', { identifier, password });
+export async function login(email: string, password: string): Promise<StudentProfile> {
+  if (isMock) return mock.login(email, password);
+
+  const result = await http<BackendLoginData>('POST', '/auth/login', { email, password });
+  setAuthToken(result.token);
+  return mapStudentProfile(result.user);
 }
 
-export function logout(): Promise<void> {
+export async function logout(): Promise<void> {
   if (isMock) return mock.logout();
-  return http<void>('POST', '/auth/logout');
+
+  try {
+    await http<void>('POST', '/auth/logout');
+  } finally {
+    clearAuthToken();
+  }
 }
 
-export function getMe(): Promise<StudentProfile> {
+export async function getMe(): Promise<StudentProfile> {
   if (isMock) return mock.me();
-  return http<StudentProfile>('GET', '/me');
+
+  if (!getAuthToken()) {
+    throw new ApiError(401, 'UNAUTHENTICATED', 'Not authenticated');
+  }
+
+  const user = await http<BackendAuthenticatedStudent>('GET', '/me');
+  return mapStudentProfile(user);
 }

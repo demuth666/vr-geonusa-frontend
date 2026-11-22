@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import SessionPhaseGuard from '@/features/learning-session/SessionPhaseGuard';
 import { useSessionResult } from '@/features/learning-session/hooks';
+import { useHeritageSite } from '@/features/heritage/hooks';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
 import { Link } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { GlobeIcon, HomeIcon, LayersIcon, StarIcon, CheckIcon } from '@/componen
 
 function ResultContent({ sessionId }: { sessionId: string }) {
   const resultQuery = useSessionResult(sessionId);
+  const siteQuery = useHeritageSite('borobudur');
 
   if (resultQuery.isLoading) {
     return (
@@ -35,13 +37,16 @@ function ResultContent({ sessionId }: { sessionId: string }) {
         </div>
         <div className="section-kicker">Petualangan Selesai</div>
         <h1 className="section-h2">Eksplorasi Selesai</h1>
-        <p className="section-desc">Kamu telah menyelesaikan pembelajaran di {result.heritage_site_name}.</p>
+        <p className="section-desc">
+          Kamu telah menyelesaikan pembelajaran
+          {siteQuery.data?.name ? ` di ${siteQuery.data.name}` : ''}.
+        </p>
 
         {/* PRD #41: tidak pernah menampilkan skor pretest/posttest/delta di sini. */}
         <div className="result-stats">
           <StatCard icon={<GlobeIcon />} tone="ico-sky" label="Panorama dikunjungi" value={result.panoramas_visited} />
           <StatCard icon={<LayersIcon />} tone="ico-amber" label="Objek dipelajari" value={result.objects_learned} />
-          <StatCard icon={<CheckIcon />} tone="ico-green" label="Aktivitas selesai" value={result.activities_completed} />
+          <StatCard icon={<CheckIcon />} tone="ico-green" label="Kuis diselesaikan" value={result.micro_quizzes_completed} />
         </div>
 
         <Link to="/" className="btn btn-primary">

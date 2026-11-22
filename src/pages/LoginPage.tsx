@@ -9,7 +9,7 @@ import { useLogin } from '@/features/auth/hooks';
  * Mode "Tamu" LFS tidak dipakai: PRD V1 mewajibkan login sebelum sesi.
  */
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const login = useLogin();
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export default function LoginPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     login.mutate(
-      { identifier, password },
+      { email, password },
       {
         // PRD #15: setelah login sukses, kembali ke tujuan semula — bukan ke landing.
         onSuccess: () => navigate(from, { replace: true }),
@@ -38,12 +38,13 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="splash-form">
         <input
-          id="identifier"
+          id="email"
           className="splash-input"
-          aria-label="NISN / Email"
-          placeholder="NISN / Email"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          type="email"
+          aria-label="Email"
+          placeholder="Email siswa"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           autoComplete="username"
         />
         <input

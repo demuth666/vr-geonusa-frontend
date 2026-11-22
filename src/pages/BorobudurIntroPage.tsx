@@ -2,8 +2,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
 import { SplashLogo } from '@/components/icons';
-import { useActiveSession, useCreateSession } from '@/features/learning-session/hooks';
+import {
+  useActiveSession,
+  useCreateSession,
+  useSessionProgress,
+} from '@/features/learning-session/hooks';
 import { useHeritageSite } from '@/features/heritage/hooks';
+import { useMe } from '@/features/auth/hooks';
 import { sessionPhaseToPath } from '@/utils/session-routing';
 
 /**
@@ -16,9 +21,11 @@ export default function BorobudurIntroPage() {
   const navigate = useNavigate();
   const siteQuery = useHeritageSite('borobudur');
   const activeSessionQuery = useActiveSession();
+  const meQuery = useMe();
   const createSession = useCreateSession();
+  const progressQuery = useSessionProgress(activeSessionQuery.data?.id);
 
-  if (siteQuery.isLoading || activeSessionQuery.isLoading) {
+  if (siteQuery.isLoading || activeSessionQuery.isLoading || meQuery.isLoading) {
     return (
       <div className="center-screen">
         <Spinner label="Memuat..." />
@@ -37,9 +44,12 @@ export default function BorobudurIntroPage() {
 
   const site = siteQuery.data;
   const activeSession = activeSessionQuery.data;
+  const respondentCode = meQuery.data?.respondent_code;
+  const progressPercentage = progressQuery.data?.percentage ?? 0;
 
   function handleCreate() {
-    createSession.mutate(site.id, {
+    if (!respondentCode) return;
+    createSession.mutate(respondentCode, {
       onSuccess: (session) => navigate(sessionPhaseToPath(session.id, session.phase)),
     });
   }
@@ -61,9 +71,9 @@ export default function BorobudurIntroPage() {
           <div className="intro-resume">
             <p>Kamu memiliki eksplorasi yang belum selesai.</p>
             <div className="resume-progress progress-track">
-              <div className="progress-fill" style={{ width: `${activeSession.progress_percentage}%` }} />
+              <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
             </div>
-            <p className="resume-pct">Progress: {activeSession.progress_percentage}%</p>
+            <p className="resume-pct">Progress: {progressPercentage}%</p>
           </div>
           <button type="button" onClick={handleResume}>
             Lanjutkan Eksplorasi
@@ -78,12 +88,22 @@ export default function BorobudurIntroPage() {
             <li>mempelajari konsep geometri,</li>
             <li>menjawab aktivitas pembelajaran.</li>
           </ul>
+          {!respondentCode && meQuery.isSuccess && (
+            <div className="splash-error-box" role="alert">
+              Akunmu belum terdaftar sebagai partisipan penelitian. Hubungi guru atau peneliti
+              untuk mendaftarkan akunmu.
+            </div>
+          )}
           {createSession.isError && (
             <div className="splash-error-box">
               <ErrorState error={createSession.error} onRetry={handleCreate} />
             </div>
           )}
-          <button type="button" onClick={handleCreate} disabled={createSession.isPending}>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={createSession.isPending || !respondentCode}
+          >
             {createSession.isPending ? 'Menyiapkan…' : 'Mulai Belajar'}
           </button>
         </>

@@ -27,10 +27,12 @@ export default function DestinationBento({ sites }: { sites: HeritageSite[] }) {
               Foto 360 Aktif
             </div>
             <div className="bento-name">{primary.name}</div>
-            <div className="bento-loc">
-              <MapPinIcon thin />
-              {primary.location}
-            </div>
+            {primary.location && (
+              <div className="bento-loc">
+                <MapPinIcon thin />
+                {primary.location}
+              </div>
+            )}
             <span className="bento-btn" aria-hidden="true">
               <PlayIcon />
               Masuk Tur 360
@@ -49,11 +51,13 @@ export default function DestinationBento({ sites }: { sites: HeritageSite[] }) {
               Segera Hadir
             </div>
             <div className="bento-name-sm">{site.name}</div>
-            <div className="bento-loc-sm">
-              <MapPinIcon thin />
-              {site.location}
-            </div>
-            <div className="bento-soon-note">{site.short_description}</div>
+            {site.location && (
+              <div className="bento-loc-sm">
+                <MapPinIcon thin />
+                {site.location}
+              </div>
+            )}
+            <div className="bento-soon-note">{site.short_description || site.description}</div>
           </div>
         </div>
       ))}

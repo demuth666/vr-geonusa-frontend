@@ -129,6 +129,7 @@ export async function getSessionResult(sessionId: string): Promise<SessionResult
     panoramas_visited: getVisitedPanoramaCount(sessionId),
     objects_learned: getMaterialsViewedCount(sessionId),
     activities_completed: isMaterialViewed(sessionId, MOCK_HERITAGE_OBJECT_ID) ? 1 : 0,
+    micro_quizzes_completed: isMicroQuizCompleted(sessionId) ? 1 : 0,
   };
 }
 

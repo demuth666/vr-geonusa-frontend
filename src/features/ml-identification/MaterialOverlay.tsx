@@ -76,31 +76,43 @@ export default function MaterialOverlay({
   return (
     <InfoPanel label="Geometri Teridentifikasi" onClose={onClose} role="dialog">
       <div className="geo-name">{material.heritage_object_name}</div>
-      {/* PRD #33: pendekatan, bukan klaim identitas mutlak. */}
-      <div className="geo-sub">Dapat didekati sebagai {geo.shape_name.toLowerCase()}</div>
-      <div className="element-tag" style={{ marginTop: 8 }}>{geo.shape_name}</div>
+      {geo.shape_name && (
+        <>
+          {/* PRD #33: pendekatan, bukan klaim identitas mutlak. */}
+          <div className="geo-sub">Dapat didekati sebagai {geo.shape_name.toLowerCase()}</div>
+          <div className="element-tag" style={{ marginTop: 8 }}>{geo.shape_name}</div>
+        </>
+      )}
 
-      <p className="info-desc">{geo.description}</p>
+      {geo.description && <p className="info-desc">{geo.description}</p>}
 
-      <div className="formula-block">
-        <div className="formula">
-          <b>{geo.formula}</b>
+      {geo.formula && (
+        <div className="formula-block">
+          <div className="formula">
+            <b>{geo.formula}</b>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="context">
-        <div className="ctx-label">Konteks Budaya</div>
-        <div>{geo.cultural_context}</div>
-      </div>
-      <div className="context">
-        <div className="ctx-label">Hubungan Budaya &amp; Geometri</div>
-        <div>{geo.culture_geometry_relation}</div>
-      </div>
+      {geo.cultural_context && (
+        <div className="context">
+          <div className="ctx-label">Konteks Budaya</div>
+          <div>{geo.cultural_context}</div>
+        </div>
+      )}
+      {geo.culture_geometry_relation && (
+        <div className="context">
+          <div className="ctx-label">Pendekatan Geometri</div>
+          <div>{geo.culture_geometry_relation}</div>
+        </div>
+      )}
 
-      <div className="info-objective">
-        <b>Tujuan Belajar</b>
-        {material.learning_objective}
-      </div>
+      {material.learning_objective && (
+        <div className="info-objective">
+          <b>Tujuan Belajar</b>
+          {material.learning_objective}
+        </div>
+      )}
 
       {material.micro_quiz_id && !quizDone ? (
         <button id="quiz-trigger-btn" onClick={() => setQuizOpen(true)}>

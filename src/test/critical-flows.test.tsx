@@ -62,7 +62,7 @@ describe('PRD #55 critical frontend tests', () => {
     const user = userEvent.setup();
     const { location } = renderApp('/app/borobudur/intro');
     await screen.findByRole('heading', { name: 'Masuk' });
-    await user.type(screen.getByLabelText('NISN / Email'), 'siswa');
+    await user.type(screen.getByLabelText('Email'), 'student@example.test');
     await user.type(screen.getByLabelText('Kata Sandi'), 'rahasia');
     await user.click(screen.getByRole('button', { name: 'Masuk' }));
     await waitFor(() => expect(location.pathname).toBe('/app/borobudur/intro'));

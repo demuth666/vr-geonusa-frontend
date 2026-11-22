@@ -45,6 +45,9 @@ export interface PanoramaNode {
 export interface StudentProfile {
   id: string;
   name: string;
+  email?: string;
+  respondent_code?: string | null;
+  student_number?: string;
   school?: string;
   grade?: string;
 }
@@ -90,6 +93,9 @@ export interface MlDetection {
 
 export interface MlPredictionResult {
   detections: MlDetection[];
+  model_version?: string;
+  inference_ms?: number;
+  total_latency_ms?: number;
 }
 
 export interface GeometryApproximation {
@@ -143,6 +149,8 @@ export interface AssessmentItem {
   id: string;
   prompt: string;
   options: QuizOption[];
+  /** Jawaban yang sudah tersimpan di backend, untuk melanjutkan draft setelah refresh. */
+  selected_option_id?: string | null;
 }
 
 export interface AssessmentAttempt {
@@ -160,6 +168,7 @@ export interface SessionResult {
   panoramas_visited: number;
   objects_learned: number;
   activities_completed: number;
+  micro_quizzes_completed: number;
 }
 
 export interface ApiErrorShape {

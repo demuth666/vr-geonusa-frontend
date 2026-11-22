@@ -1,77 +1,81 @@
-# Permintaan Kontrak API untuk Tim Backend
+# Catatan Integrasi Frontend ↔ Backend
 
-> Status: **menunggu respons backend** · Dibuat: 2026-11-01 · Alur sesuai PRD §3 / §57
-> (frontend mengajukan kebutuhan → backend mereview kontrak → OpenAPI diperbarui → implementasi → frontend menyesuaikan).
+> Status: **selesai** — frontend sudah memakai OpenAPI resmi dari
+> `vr-geonusa-backend/contracts/openapi.yaml` sebagai sumber kebenaran.
+> Dokumen ini merangkum keputusan integrasi dan perubahan kecil yang
+> diperlukan di backend.
 
-Frontend V1 (siswa) sudah selesai dan saat ini berjalan di atas **mock** (`VITE_API_MODE=mock`).
-`contracts/openapi.yaml` di repo ini **masih sementara** — disusun frontend dari PRD §42, bukan kontrak resmi.
-Supaya bisa pindah ke API asli, frontend membutuhkan hal-hal berikut.
+## Kontrak resmi
 
-## 1. OpenAPI resmi
+- `contracts/openapi.yaml` di repo frontend adalah salinan dari repo backend.
+- `src/api/backend-types.ts` mengikuti DTO OpenAPI.
+- `src/api/adapters.ts` memetakan DTO backend ke view model UI di
+  `src/types/api.ts`.
+- `src/api/contract.test.ts` memastikan setiap panggilan `http()` frontend
+  ada di kontrak (path dinormalisasi dari prefix `/api/v1`).
 
-`contracts/openapi.yaml` resmi untuk semua endpoint PRD §42, lengkap dengan schema request/response dan bentuk error.
-Begitu ada, frontend mengganti file sementara dan mencocokkan `src/types/api.ts`.
-Test `src/api/contract.test.ts` otomatis gagal bila ada panggilan frontend yang tidak tercantum di OpenAPI.
+## Autentikasi
 
-## 2. Autentikasi
+Backend memakai **Laravel Sanctum Bearer token**, bukan cookie SPA:
 
-Mohon konfirmasi:
-
-- Pakai **Laravel Sanctum SPA** (cookie + `GET /sanctum/csrf-cookie` + header `X-XSRF-TOKEN`) atau mekanisme lain?
-  Frontend sudah siap untuk Sanctum lewat `VITE_SANCTUM_CSRF=true`.
-- Domain cookie & CORS untuk dev/staging. Frontend mengirim `credentials: 'include'`.
-- Body `POST /auth/login`: frontend saat ini mengirim `{ identifier, password }`.
-
-## 3. Bentuk respons
-
-- Apakah respons dibungkus `{ data: ... }`? Frontend meng-unwrap otomatis bila ada.
-- Bila tidak ada sesi aktif, `GET /me/learning-sessions/active` mengembalikan `{ data: null }` atau `404`?
-- Format error. Asumsi frontend: body `{ code, message }` dengan status 401 / 403 / 404 / 409 / 422 / 429 / 500 / 503 (PRD §43).
-
-## 4. Write token sesi (PRD §20)
-
-- Frontend menyimpan `write_token` **hanya di memory** dan mengirimnya lewat header `X-Learning-Session-Token`.
-- Token hilang saat halaman di-refresh; frontend mengambil ulang lewat `GET /me/learning-sessions/active`.
-  **Mohon endpoint ini ikut mengembalikan `write_token`**, atau beri tahu mekanisme penggantinya.
-
-## 5. Respons ML — `POST /learning-sessions/{id}/ml-predictions`
-
-Saat ini belum ada schema. Asumsi frontend:
-
-```json
-{ "detections": [{ "heritage_object_id": "obj-stupa-1", "label": "STUPA", "confidence": 0.94 }] }
+```text
+POST /api/v1/auth/login  { email, password }
+→ { data: { token, user } }
 ```
 
-- `detections: []` = tidak ada objek terdeteksi (bukan error, PRD §31).
-- **Skala `confidence`: 0–1 atau 0–100?** (UI saat ini menerima keduanya.)
-- Layanan ML tidak tersedia → **503**?
-- Request yang dikirim frontend: `panorama_node_id`, `camera_yaw`, `camera_pitch`, `camera_fov`, `image` (base64 JPEG).
+- Frontend menyimpan token di `sessionStorage` (`src/api/auth-token.ts`),
+  bukan `localStorage`, dan mengirim `Authorization: Bearer <token>`.
+- `GET /api/v1/me` mengembalikan `respondent_code` milik siswa. Frontend
+  memakainya otomatis untuk `POST /api/v1/learning-sessions`
+  (`{ respondent_code }`), sehingga siswa tidak perlu mengetik kode penelitian.
 
-## 6. Field yang dipakai frontend
+## Write token sesi
 
-Mohon cek kecocokan nama dan tipe:
+- Header resmi: `X-Session-Write-Token`.
+- Token hanya dikembalikan sekali saat sesi dibuat dan hanya disimpan di
+  memory frontend.
+- Backend diubah agar `GET /api/v1/me/learning-sessions/active` menerbitkan
+  token baru setiap resume. Ini membuat refresh halaman tidak mengunci
+  siswa dari mutasi sesi.
+- `GET /api/v1/learning-sessions/{id}` (read-only) tidak lagi mewajibkan
+  write token; ownership tetap dicek. Token tetap wajib untuk semua mutasi.
+- `POST /api/v1/learning-sessions/{id}/assessment-attempts` bersifat
+  idempotent untuk attempt berstatus draft, sehingga refresh saat pretest/
+  posttest/self-efficacy melanjutkan attempt yang sama.
 
-| Resource | Field |
+## ML
+
+`POST /api/v1/learning-sessions/{id}/ml-predictions` memakai
+`multipart/form-data`, bukan JSON base64:
+
+```text
+image (JPEG/PNG/WebP), panorama_node_id, camera_yaw, camera_pitch, camera_fov
+```
+
+Respons berisi `model_version`, latency, dan `detections[]`. Frontend hanya
+memakai detection yang berhasil dipetakan ke `heritage_object`; detection
+tanpa pemetaan ditampilkan sebagai "tidak ada objek".
+
+## Field yang belum ada di API
+
+Agar tidak mengarang konten, UI menyesuaikan diri pada data yang tersedia:
+
+| UI | Perlakuan |
 |---|---|
-| Panorama node | `id`, `name`, `image_url`, `initial_yaw`, `initial_pitch`, `hotspots[{ id, target_node_id, yaw, pitch, label }]` — derajat; yaw 0 = depan, yaw positif = ke kanan |
-| Heritage site | `id`, `slug`, `name`, `location`, `cover_image_url`, `short_description`, `description`, `learning_objectives[]`, `experience_features[]`, `available_areas_count`, `status` (`available` / `coming_soon`) |
-| Area | `id`, `name`, `panorama_node_ids[]` |
-| Learning session | `id`, `phase`, `next_step`, `current_panorama_node_id`, `progress_percentage`, `write_token` |
-| Progress | `percentage`, `requirements{ required_panorama_visited, geometry_identified, learning_material_viewed, micro_quiz_completed }`, `can_finish` |
-| Learning material | `heritage_object_name`, `learning_objective`, `geometry{ shape_name, formula, description, cultural_context, culture_geometry_relation }`, `micro_quiz_id` |
-| Jawaban micro quiz | `{ question_id, is_correct, feedback }` — boleh untuk micro quiz (PRD §36) |
-| Assessment | item & opsi **tanpa** `is_correct` / `correct_answer` (PRD §21) |
-| Result | `heritage_site_name`, `panoramas_visited`, `objects_learned`, `activities_completed` |
+| Lokasi situs | Disembunyikan bila kosong |
+| Tujuan pembelajaran situs / fitur pengalaman | Section disembunyikan bila kosong |
+| Rumus & konteks budaya materi | Section disembunyikan bila kosong |
+| Jumlah area panorama | Diambil dari `GET /heritage-sites/{slug}/areas` |
+| Nama situs di halaman hasil | Diambil dari `GET /heritage-sites/{slug}` |
+| `micro_quiz_id` | Ditambahkan ke setiap `geometry_mappings[]` pada learning material |
 
-Definisi lengkap ada di `src/types/api.ts`.
+## Data dev
 
-## 7. Data panorama
+`DemoLearningSeeder` di backend (local/testing) membuat:
 
-Repo lama (VR-GeoNusa LFS) sudah punya 60 foto 360° beserta sambungan antar titiknya di `data/tour-borobudur.json`
-(`connections`: `"Maju"` = `local_angle` 0, `"Mundur"` = 180). Bisa dipakai untuk seeding `panorama-nodes`.
-Untuk dev, mock frontend saat ini memakai 3 node dari sana (`teras-3-04`, `plateu-00`, `plateu-01`).
+- `ResearchParticipant` untuk siswa demo (`student@example.test` / `student`),
+- `LearningExperienceRevision` yang sudah dipublikasikan,
+- `MlClassMapping` untuk dummy detector (`stupa`, versi `dummy-v1`).
 
-## Setelah OpenAPI resmi tersedia
-
-Mohon share **URL staging** supaya kita bisa uji integrasi bersama (`VITE_API_MODE=real`).
-Kalau ada field yang berbeda dari daftar di atas, kirim saja OpenAPI-nya — frontend yang menyesuaikan.
+Jalankan `php artisan migrate --seed` (atau `db:seed`) di backend sebelum
+mencoba alur siswa end-to-end.

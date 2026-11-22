@@ -695,8 +695,12 @@ Frontend must keep this token only as required by the agreed backend integration
 For session-scoped mutation requests, send:
 
 ```text
-X-Learning-Session-Token
+X-Session-Write-Token
 ```
+
+Backend resmi menerbitkan token baru lewat `GET /me/learning-sessions/active`
+saat resume, sehingga refresh halaman tetap bisa melanjutkan sesi tanpa
+menyimpan plaintext token secara permanen.
 
 Do not:
 

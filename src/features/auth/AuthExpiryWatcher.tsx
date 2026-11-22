@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/error';
+import { clearAuthToken } from '@/api/auth-token';
 import { setSessionWriteToken } from '@/api/session-token';
 
 function isUnauthorized(err: unknown) {
@@ -24,6 +25,7 @@ export default function AuthExpiryWatcher() {
 
     const handle = (err: unknown) => {
       if (!isUnauthorized(err)) return;
+      clearAuthToken();
       setSessionWriteToken(null);
       qc.setQueryData(['me'], null);
       navigate('/login', { replace: true, state: { from: location } });

@@ -156,7 +156,7 @@ function ExploreContent({ session }: { session: LearningSession }) {
           <div>
             <div className="hud-label">VR-GeoNusa · Tur 360°</div>
             <div className="hud-name">{site?.name ?? 'Borobudur'}</div>
-            <div className="hud-loc">{site?.location ?? 'Magelang, Jawa Tengah'}</div>
+            {site?.location && <div className="hud-loc">{site.location}</div>}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CompassIcon, UserIcon } from './icons';
-import { useMe } from '@/features/auth/hooks';
+import { useLogout, useMe } from '@/features/auth/hooks';
 
 /**
  * Navbar LFS (.nav kids.css). Link section memakai "/#id" supaya bekerja
@@ -13,6 +13,8 @@ export default function Navbar() {
   const [solid, setSolid] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const logout = useLogout();
 
   // Tutup menu mobile setiap pindah halaman/anchor.
   useEffect(() => setMenuOpen(false), [location.pathname, location.hash]);
@@ -44,10 +46,20 @@ export default function Navbar() {
       </nav>
       <div className="nav-spacer" />
       {me ? (
-        <Link to="/app/borobudur/intro" className="nav-admin is-primary">
-          <UserIcon />
-          Ruang Belajar
-        </Link>
+        <div className="nav-session-actions">
+          <Link to="/app/borobudur/intro" className="nav-admin is-primary">
+            <UserIcon />
+            Ruang Belajar
+          </Link>
+          <button
+            type="button"
+            className="nav-admin"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/') })}
+          >
+            Keluar
+          </button>
+        </div>
       ) : (
         <Link to="/login" className="nav-admin">
           <UserIcon />
@@ -77,6 +89,17 @@ export default function Navbar() {
           <Link to="/#cara-main">Cara Main</Link>
           <Link to="/#geometri">Bangun Ruang</Link>
           <Link to="/team">Tim</Link>
+          {me && <Link to="/app/borobudur/intro">Ruang Belajar</Link>}
+          {me && (
+            <button
+              type="button"
+              className="nav-mobile-logout"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/') })}
+            >
+              Keluar
+            </button>
+          )}
         </nav>
       )}
     </header>

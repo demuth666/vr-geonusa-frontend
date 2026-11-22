@@ -5,6 +5,9 @@ import path from 'node:path';
 /**
  * PRD #9/#54: setiap request mode "real" harus ada di contracts/openapi.yaml.
  * Menangkap drift path/method sebelum integrasi dengan backend sungguhan.
+ *
+ * File kontrak disalin dari repo backend dan memakai prefix `/api/v1`;
+ * frontend memanggil path relatif terhadap base yang sama.
  */
 const root = path.resolve(__dirname, '../..');
 
@@ -15,7 +18,7 @@ function openApiOperations(): Set<string> {
   for (const line of yaml.split('\n')) {
     const p = line.match(/^ {2}(\/\S+):\s*$/);
     if (p) {
-      currentPath = p[1];
+      currentPath = p[1].replace(/^\/api\/v1/, '') || '/';
       continue;
     }
     const m = line.match(/^ {4}(get|post|put|patch|delete):/);

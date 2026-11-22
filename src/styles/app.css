@@ -22,6 +22,9 @@
 .btn-sm { padding: 10px 18px; font-size: 13px; border-radius: 12px; }
 
 /* Nav right-side login link — same look as LFS .nav-admin */
+.nav-session-actions { display: inline-flex; align-items: center; gap: 8px; }
+button.nav-admin { font-family: inherit; cursor: pointer; }
+button.nav-admin:disabled { opacity: .6; cursor: wait; }
 .nav-admin.is-primary { background: var(--green-soft); border-color: #A7F3D0; color: var(--green-dark); }
 .nav-admin.is-primary:hover { border-color: var(--green); background: var(--green-soft); color: var(--green-dark); }
 
@@ -289,6 +292,12 @@
   padding: 12px 14px; border-radius: var(--r-sm);
 }
 .nav-mobile a:hover, .nav-mobile a:focus-visible { background: var(--green-soft); color: var(--green-dark); }
+.nav-mobile-logout {
+  font-family: inherit; font-size: 15px; font-weight: 800; color: var(--text-2);
+  text-align: left; padding: 12px 14px; border: 0; border-radius: var(--r-sm);
+  background: transparent; cursor: pointer;
+}
+.nav-mobile-logout:hover { background: var(--sky-soft); color: var(--sky-dark); }
 
 @media (max-width: 768px) {
   .nav-menu-btn { display: inline-flex; }
@@ -301,6 +310,7 @@
 @media (max-width: 540px) {
   .nav { padding: 0 16px; }
   .nav-admin { padding: 8px 12px; }
+  .nav-session-actions .nav-admin.is-primary { display: none; }
   .hero { padding-top: 100px; gap: 24px; min-height: auto; }
   .hero-btns { width: 100%; }
   .hero-btns .btn { flex: 1 1 100%; }

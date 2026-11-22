@@ -4,7 +4,7 @@ import Footer from '@/components/Footer';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
 import EmptyState from '@/components/EmptyState';
-import { useHeritageSites } from '@/features/heritage/hooks';
+import { useHeritageAreas, useHeritageSites } from '@/features/heritage/hooks';
 import DestinationBento from '@/features/landing/DestinationBento';
 import HowToPlay from '@/features/landing/HowToPlay';
 import GeometryGallery from '@/features/landing/GeometryGallery';
@@ -33,7 +33,10 @@ export default function LandingPage() {
   const sites = sitesQuery.data ?? [];
   const primary = sites.find((s) => s.status === 'available');
   const activeCount = sites.filter((s) => s.status === 'available').length;
-  const areaCount = sites.reduce((n, s) => n + (s.status === 'available' ? s.available_areas_count : 0), 0);
+  // The list endpoint does not carry an area count; read it from the primary
+  // site's areas instead of treating a missing field as zero.
+  const areasQuery = useHeritageAreas(primary?.slug);
+  const areaCount = areasQuery.data?.length ?? 0;
 
   useReveal([sitesQuery.status]);
 

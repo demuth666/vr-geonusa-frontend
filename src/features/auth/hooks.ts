@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/api/error';
+import { setSessionWriteToken } from '@/api/session-token';
 import * as api from './api';
 
 /**
@@ -20,8 +21,8 @@ export function useMe() {
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { identifier: string; password: string }) =>
-      api.login(vars.identifier, vars.password),
+    mutationFn: (vars: { email: string; password: string }) =>
+      api.login(vars.email, vars.password),
     onSuccess: (profile) => {
       qc.setQueryData(['me'], profile);
     },
@@ -32,7 +33,9 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.logout,
-    onSuccess: () => {
+    // Local logout must succeed even when the network call fails.
+    onSettled: () => {
+      setSessionWriteToken(null);
       qc.setQueryData(['me'], null);
       qc.clear();
     },

@@ -27,7 +27,7 @@ export function useAnswerAssessmentItem() {
 export function useSubmitAssessmentAttempt(sessionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (attemptId: string) => api.submitAssessmentAttempt(attemptId),
+    mutationFn: (attemptId: string) => api.submitAssessmentAttempt(sessionId, attemptId),
     onSuccess: (session) => {
       qc.setQueryData(['learning-sessions', sessionId], session);
     },

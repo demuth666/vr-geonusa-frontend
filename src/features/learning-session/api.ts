@@ -1,5 +1,19 @@
 import { isMock } from '@/api/mode';
 import { http } from '@/api/client';
+import {
+  mapExplorationProgress,
+  mapLearningMaterial,
+  mapLearningSession,
+  mapMlPrediction,
+  mapSessionResult,
+} from '@/api/adapters';
+import type {
+  BackendCompletedSessionResult,
+  BackendExplorationProgress,
+  BackendLearningMaterial,
+  BackendLearningSession,
+  BackendMlPrediction,
+} from '@/api/backend-types';
 import * as mock from '@/api/mock/learning-session';
 import type {
   LearningMaterial,
@@ -11,32 +25,55 @@ import type {
 
 export function getActiveSession(): Promise<LearningSession | null> {
   if (isMock) return mock.getActiveSession();
-  return http<LearningSession | null>('GET', '/me/learning-sessions/active');
+  return http<BackendLearningSession | null>('GET', '/me/learning-sessions/active').then(
+    (session) => (session ? mapLearningSession(session) : null)
+  );
 }
 
-export function createSession(heritageSiteId: string): Promise<LearningSession> {
-  if (isMock) return mock.createSession(heritageSiteId);
-  return http<LearningSession>('POST', '/learning-sessions', { heritage_site_id: heritageSiteId });
+export async function createSession(respondentCode: string): Promise<LearningSession> {
+  if (isMock) return mock.createSession(respondentCode);
+  const session = await http<BackendLearningSession>('POST', '/learning-sessions', {
+    respondent_code: respondentCode,
+  });
+  return mapLearningSession(session);
 }
 
-export function getSession(id: string): Promise<LearningSession> {
-  if (isMock) return mock.getSession(id);
-  return http<LearningSession>('GET', `/learning-sessions/${id}`);
+export function getSession(sessionId: string): Promise<LearningSession> {
+  if (isMock) return mock.getSession(sessionId);
+  return http<BackendLearningSession>('GET', `/learning-sessions/${sessionId}`).then(
+    mapLearningSession
+  );
 }
 
-export function getSessionProgress(id: string): Promise<SessionProgress> {
-  if (isMock) return mock.getSessionProgress(id);
-  return http<SessionProgress>('GET', `/learning-sessions/${id}/progress`);
+export function getSessionProgress(sessionId: string): Promise<SessionProgress> {
+  if (isMock) return mock.getSessionProgress(sessionId);
+  return http<BackendExplorationProgress>(
+    'GET',
+    `/learning-sessions/${sessionId}/progress`
+  ).then(mapExplorationProgress);
 }
 
 export function recordPanoramaVisit(sessionId: string, panoramaNodeId: string): Promise<void> {
   if (isMock) return mock.recordPanoramaVisit(sessionId, panoramaNodeId);
   return http<void>('POST', `/learning-sessions/${sessionId}/panorama-visits`, {
-    panorama_node_id: panoramaNodeId,
+    panorama_node_id: Number(panoramaNodeId),
   });
 }
 
-export function predictGeometry(
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, encoded] = dataUrl.split(',');
+  const mime = header.match(/data:([^;]+)/)?.[1] ?? 'image/jpeg';
+  const binary = atob(encoded ?? '');
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mime });
+}
+
+export async function predictGeometry(
   sessionId: string,
   panoramaNodeId: string,
   cameraYaw: number,
@@ -45,35 +82,63 @@ export function predictGeometry(
   imageDataUrl: string
 ): Promise<MlPredictionResult> {
   if (isMock) {
-    return mock.predictGeometry(sessionId, panoramaNodeId, cameraYaw, cameraPitch, cameraFov, imageDataUrl);
+    return mock.predictGeometry(
+      sessionId,
+      panoramaNodeId,
+      cameraYaw,
+      cameraPitch,
+      cameraFov,
+      imageDataUrl
+    );
   }
-  // Frontend TIDAK PERNAH memanggil FastAPI ML langsung — selalu lewat
-  // endpoint Laravel ini (PRD #10, #28).
-  return http<MlPredictionResult>('POST', `/learning-sessions/${sessionId}/ml-predictions`, {
-    panorama_node_id: panoramaNodeId,
-    camera_yaw: cameraYaw,
-    camera_pitch: cameraPitch,
-    camera_fov: cameraFov,
-    image: imageDataUrl,
-  });
+
+  // Frontend TIDAK PERNAH memanggil FastAPI ML langsung - selalu lewat
+  // endpoint Laravel ini (PRD #10, #28). Kontrak resmi memakai
+  // multipart/form-data, bukan JSON base64.
+  const form = new FormData();
+  form.append('image', dataUrlToBlob(imageDataUrl), 'viewport.jpg');
+  form.append('panorama_node_id', String(Number(panoramaNodeId)));
+  form.append('camera_yaw', String(cameraYaw));
+  form.append('camera_pitch', String(cameraPitch));
+  form.append('camera_fov', String(cameraFov));
+
+  const prediction = await http<BackendMlPrediction>(
+    'POST',
+    `/learning-sessions/${sessionId}/ml-predictions`,
+    form
+  );
+
+  return mapMlPrediction(prediction);
 }
 
 export function getLearningMaterial(heritageObjectId: string): Promise<LearningMaterial> {
   if (isMock) return mock.getLearningMaterial(heritageObjectId);
-  return http<LearningMaterial>('GET', `/heritage-objects/${heritageObjectId}/learning-material`);
+  return http<BackendLearningMaterial>(
+    'GET',
+    `/heritage-objects/${heritageObjectId}/learning-material`
+  ).then(mapLearningMaterial);
 }
 
-export function markMaterialAsViewed(sessionId: string, heritageObjectId: string): Promise<void> {
+export function markMaterialAsViewed(
+  sessionId: string,
+  heritageObjectId: string
+): Promise<void> {
   if (isMock) return mock.markMaterialAsViewed(sessionId, heritageObjectId);
   return http<void>('POST', `/learning-sessions/${sessionId}/materials/${heritageObjectId}/viewed`);
 }
 
 export function completeExploration(sessionId: string): Promise<LearningSession> {
   if (isMock) return mock.completeExploration(sessionId);
-  return http<LearningSession>('POST', `/learning-sessions/${sessionId}/exploration/complete`);
+  return http<BackendLearningSession>(
+    'POST',
+    `/learning-sessions/${sessionId}/exploration/complete`
+  ).then(mapLearningSession);
 }
 
 export function getSessionResult(sessionId: string): Promise<SessionResult> {
   if (isMock) return mock.getSessionResult(sessionId);
-  return http<SessionResult>('GET', `/learning-sessions/${sessionId}/result`);
+  return http<BackendCompletedSessionResult>(
+    'GET',
+    `/learning-sessions/${sessionId}/result`
+  ).then(mapSessionResult);
 }

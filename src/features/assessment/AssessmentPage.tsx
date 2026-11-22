@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   useStartAssessmentAttempt,
   useAssessmentAttempt,
@@ -51,6 +51,23 @@ export default function AssessmentPage({ sessionId, instrument, title, descripti
   const attemptQuery = useAssessmentAttempt(attemptId);
   const answerItem = useAnswerAssessmentItem();
   const submitAttempt = useSubmitAssessmentAttempt(sessionId);
+  const restoredRef = useRef(false);
+
+  // Backend menyimpan draft + jawaban yang sudah dikirim. Setelah refresh,
+  // pulihkan pilihan dan posisi soal supaya siswa tidak mengulang dari awal.
+  useEffect(() => {
+    const attempt = attemptQuery.data;
+    if (!attempt || restoredRef.current) return;
+
+    restoredRef.current = true;
+    const savedAnswers = Object.fromEntries(
+      attempt.items.flatMap((item) =>
+        item.selected_option_id ? [[item.id, item.selected_option_id]] : []
+      )
+    );
+    if (Object.keys(savedAnswers).length > 0) setAnswers(savedAnswers);
+    setIndex(Math.min(attempt.current_index, Math.max(0, attempt.items.length - 1)));
+  }, [attemptQuery.data]);
 
   if (startAttempt.isPending || attemptQuery.isLoading || !attemptQuery.data) {
     return (

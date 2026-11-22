@@ -1,252 +1,1781 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: VR-GeoNusa API (provisional — frontend working contract)
-  version: "0.1.0-provisional"
-  description: >
-    PENTING: file ini BUKAN kontrak resmi dari Backend/ML Team.
-    Backend belum membagikan contracts/openapi.yaml yang sesungguhnya saat
-    frontend V1 ini dikerjakan. File ini ditulis frontend sebagai
-    "typed mock" sementara, murni diturunkan dari bentuk payload yang
-    dideskripsikan di PRD (section 21, 25, 28, 30, 37, 42). Begitu backend
-    merilis openapi.yaml resmi, GANTI file ini dan sesuaikan
-    src/types/api.ts + src/api/mock/* mengikuti PRD #53 (mock → real API).
-    Jangan jadikan file ini sumber kebenaran permanen.
-servers:
-  - url: /api/v1
+  title: VR-GeoNusa API
+  version: 0.10.0
 paths:
-  /heritage-sites:
+  /api/v1/health:
     get:
-      summary: List heritage sites (public)
+      operationId: getHealth
+      summary: Check API health
       responses:
         "200":
-          description: OK
-  /heritage-sites/{slug}:
-    get:
-      summary: Heritage site detail (public)
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: OK }
-        "404": { description: Not found }
-  /heritage-sites/{slug}/areas:
-    get:
-      summary: Areas belonging to a heritage site
-      parameters:
-        - in: path
-          name: slug
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: OK }
-  /panorama-nodes/{id}:
-    get:
-      summary: Panorama node metadata (asset, initial view, navigation links)
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: OK }
-  /auth/login:
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [status]
+                    properties:
+                      status:
+                        type: string
+                        const: ok
+        default:
+          description: API error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/login:
     post:
-      summary: Student login. Backend sets secure session cookie.
+      operationId: loginStudent
+      summary: Authenticate a student
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [identifier, password]
-              properties:
-                identifier: { type: string }
-                password: { type: string }
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        "200": { description: OK }
-        "401": { description: Invalid credentials }
-  /auth/logout:
+        "200":
+          description: Student authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "422":
+          description: Invalid input or credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/logout:
     post:
-      summary: Logout, invalidates session cookie
+      operationId: logoutStudent
+      summary: Revoke the current access token
+      security:
+        - bearerAuth: []
       responses:
-        "204": { description: No Content }
-  /me:
+        "204":
+          description: Student logged out
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/me:
     get:
-      summary: Current authenticated student (source of truth for auth state)
+      operationId: getCurrentStudent
+      summary: Get the authenticated student
+      security:
+        - bearerAuth: []
       responses:
-        "200": { description: OK }
-        "401": { description: Not authenticated }
-  /me/learning-sessions/active:
+        "200":
+          description: Authenticated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedStudentResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/me/learning-sessions/active:
     get:
-      summary: Active (unfinished) learning session for current student, if any
+      operationId: getActiveLearningSession
+      summary: Get the authenticated student's active learning session and a fresh write token
+      description: >-
+        When a session is active, this response includes a newly issued
+        session write token and invalidates any previously issued token. The
+        plaintext token is never recoverable, so an authenticated resume is
+        how a refreshed client obtains a usable token again.
+      security:
+        - bearerAuth: []
       responses:
-        "200": { description: OK — session or null }
-        "401": { description: Not authenticated }
-  /learning-sessions:
+        "200":
+          description: Active learning session with a fresh write token, or null when none exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveLearningSessionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions:
     post:
-      summary: Create a new learning session for a heritage site
+      operationId: createLearningSession
+      summary: Create a learning session for the authenticated student
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [heritage_site_id]
-              properties:
-                heritage_site_id: { type: string }
+              $ref: "#/components/schemas/CreateLearningSessionRequest"
       responses:
-        "201": { description: Created — includes X-Learning-Session-Token-bearing session }
-  /learning-sessions/{id}:
+        "201":
+          description: Learning session created; the write token is returned only once
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateLearningSessionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Respondent code does not belong to the authenticated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: The student already has an active learning session or the study has no published Learning Experience Revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid input or client-supplied session state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}:
     get:
-      summary: Learning session detail (phase, next_step, current_panorama_node_id)
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: OK }
-        "403": { description: Not owner of session }
-        "404": { description: Not found }
-  /learning-sessions/{id}/progress:
-    get:
-      summary: Session progress (percentage, requirements, can_finish)
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/panorama-visits:
-    post:
-      summary: Notify backend of a panorama node visit
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [panorama_node_id]
-              properties:
-                panorama_node_id: { type: string }
-      responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/ml-predictions:
-    post:
-      summary: >
-        Submit a viewport capture for geometry identification. Frontend NEVER
-        calls the ML/FastAPI service directly — always via this Laravel route.
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [panorama_node_id, camera_yaw, camera_pitch, camera_fov, image]
-              properties:
-                panorama_node_id: { type: string }
-                camera_yaw: { type: number }
-                camera_pitch: { type: number }
-                camera_fov: { type: number }
-                image: { type: string, description: base64 data URL of viewport capture }
-      responses:
-        "200": { description: OK — prediction result or empty detections }
-        "503": { description: ML temporarily unavailable }
-  /heritage-objects/{id}/learning-material:
-    get:
-      summary: Learning material for an identified heritage object
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/materials/{objectId}/viewed:
-    post:
-      summary: Mark a learning material as viewed
+      operationId: getLearningSession
+      summary: Get a learning session owned by the authenticated student
+      description: >-
+        Reading an owned session does not require the session write token.
+        The token is required for session-scoped mutations only.
+      security:
+        - bearerAuth: []
       parameters:
-        - { in: path, name: id, required: true, schema: { type: string } }
-        - { in: path, name: objectId, required: true, schema: { type: string } }
+        - $ref: "#/components/parameters/LearningSessionId"
       responses:
-        "200": { description: OK }
-  /quizzes/{id}:
+        "200":
+          description: Learning session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningSessionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/result:
     get:
-      summary: Micro quiz question set (no correctness included)
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      operationId: getCompletedLearningSessionResult
+      summary: Get the result summary of a completed learning session owned by the authenticated student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
       responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/quiz-attempts:
+        "200":
+          description: Completed session summary without exposing answer keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompletedSessionResultResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Completed learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/progress:
+    get:
+      operationId: getExplorationProgress
+      summary: Get server-calculated completion status for the owned session's required exploration activities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+      responses:
+        "200":
+          description: Required activity completion status without Micro Quiz answer or correctness data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExplorationProgressResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/exploration/complete:
     post:
-      summary: Start a micro quiz attempt
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      operationId: completeExploration
+      summary: Advance an owned exploration session to posttest after every required activity is complete
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
       responses:
-        "201": { description: Created }
-  /quiz-attempts/{attemptId}/answers/{questionId}:
+        "200":
+          description: Exploration completed and the session advanced to posttest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningSessionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: A required activity is incomplete or the session is not in exploration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/panorama-visits:
+    post:
+      operationId: recordPanoramaVisit
+      summary: Record a panorama visit during exploration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordPanoramaVisitRequest"
+      responses:
+        "201":
+          description: Panorama visit recorded and current panorama updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityEventResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Learning session is not in the exploration phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid panorama node or client-supplied visit state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/ml-predictions:
+    post:
+      operationId: createMlPrediction
+      summary: Identify geometry in a camera viewport during exploration, resolving known detector classes to heritage learning content
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateMlPredictionRequest"
+      responses:
+        "201":
+          description: Successful versioned prediction; the submitted image is not retained
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MlPredictionResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session or panorama node not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Learning session is not in the exploration phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid image or panorama/camera metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: ML service unavailable or returned an invalid prediction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/materials/{objectId}/viewed:
+    post:
+      operationId: recordLearningMaterialView
+      summary: Record a heritage-object learning material view during exploration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/HeritageObjectPathId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordMaterialViewRequest"
+      responses:
+        "201":
+          description: Learning material view recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialViewEventResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session is not owned or heritage object does not exist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Learning session is not in the exploration phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client supplied server-owned material-view state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/quiz-attempts:
+    post:
+      operationId: startMicroQuizAttempt
+      summary: Start a Micro Quiz attempt during exploration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartQuizAttemptRequest"
+      responses:
+        "201":
+          description: Micro Quiz attempt created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Learning session is not in the exploration phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid quiz or client-supplied scoring or feedback fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quiz-attempts/{attemptId}/answers/{questionId}:
     put:
-      summary: Submit/replace answer for one micro quiz question
+      operationId: answerMicroQuizQuestion
+      summary: Immutably answer one Micro Quiz question with formative feedback
+      security:
+        - bearerAuth: []
       parameters:
-        - { in: path, name: attemptId, required: true, schema: { type: string } }
-        - { in: path, name: questionId, required: true, schema: { type: string } }
+        - $ref: "#/components/parameters/QuizAttemptPathId"
+        - $ref: "#/components/parameters/QuizQuestionPathId"
+        - $ref: "#/components/parameters/SessionWriteToken"
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [selected_option_id]
-              properties:
-                selected_option_id: { type: string }
+              $ref: "#/components/schemas/SaveQuizAnswerRequest"
       responses:
-        "200": { description: OK — includes is_correct + feedback (micro quiz only) }
-  /quiz-attempts/{attemptId}/submit:
+        "200":
+          description: Answer recorded with server-calculated correctness and formative feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAnswerResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Micro Quiz attempt not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Question was already answered or session is not in exploration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid question, selected option, or client-supplied scoring or feedback fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quiz-attempts/{attemptId}/submit:
     post:
-      summary: Finalize micro quiz attempt
-      parameters: [{ in: path, name: attemptId, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/assessment-attempts:
-    post:
-      summary: Start a pretest/posttest/self-efficacy attempt
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      operationId: submitMicroQuizAttempt
+      summary: Score, complete, and lock a fully answered Micro Quiz attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/QuizAttemptPathId"
+        - $ref: "#/components/parameters/SessionWriteToken"
       requestBody:
+        required: false
         content:
           application/json:
             schema:
-              type: object
-              required: [instrument]
-              properties:
-                instrument: { type: string, enum: [pretest, posttest, self_efficacy] }
+              $ref: "#/components/schemas/SubmitQuizAttemptRequest"
       responses:
-        "201": { description: Created }
-  /assessment-attempts/{id}:
+        "200":
+          description: Micro Quiz attempt submitted with its formative score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Micro Quiz attempt not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Attempt is incomplete, submitted, or outside the exploration phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client supplied score or submission state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/learning-sessions/{id}/assessment-attempts:
+    post:
+      operationId: startAssessmentAttempt
+      summary: Start or resume the assessment matching the learning session's current phase
+      description: >-
+        Starting is idempotent while a draft attempt exists for the phase, so
+        a refreshed client receives the same draft attempt and can continue.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LearningSessionId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartAssessmentAttemptRequest"
+      responses:
+        "200":
+          description: Existing draft assessment attempt resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentAttemptResponse"
+        "201":
+          description: Assessment attempt created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Learning session not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Session phase is invalid, instrument is unavailable, or an attempt already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client supplied server-owned assessment state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/assessment-attempts/{id}:
     get:
-      summary: Assessment attempt detail (items, no correct answers ever)
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      operationId: getAssessmentAttempt
+      summary: Get an assessment attempt owned by the authenticated student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AssessmentAttemptId"
       responses:
-        "200": { description: OK }
-  /assessment-attempts/{attemptId}/answers/{itemId}:
+        "200":
+          description: Assessment attempt without answer correctness or score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Assessment attempt not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/assessment-attempts/{attemptId}/answers/{itemId}:
     put:
-      summary: Submit/replace answer for one assessment item (no correctness returned)
+      operationId: saveAssessmentAnswer
+      summary: Create or replace one answer on a draft assessment attempt
+      security:
+        - bearerAuth: []
       parameters:
-        - { in: path, name: attemptId, required: true, schema: { type: string } }
-        - { in: path, name: itemId, required: true, schema: { type: string } }
+        - $ref: "#/components/parameters/AssessmentAttemptPathId"
+        - $ref: "#/components/parameters/AssessmentItemPathId"
+        - $ref: "#/components/parameters/SessionWriteToken"
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [selected_option_id]
-              properties:
-                selected_option_id: { type: string }
+              $ref: "#/components/schemas/SaveAssessmentAnswerRequest"
       responses:
-        "200": { description: OK }
-  /assessment-attempts/{attemptId}/submit:
+        "200":
+          description: Answer saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Assessment attempt not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Attempt is submitted or invalid for the current session phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Invalid item or selected option
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/assessment-attempts/{attemptId}/submit:
     post:
-      summary: Finalize assessment attempt. Score computed server-side, never returned raw to student unless product requires it.
-      parameters: [{ in: path, name: attemptId, required: true, schema: { type: string } }]
+      operationId: submitAssessmentAttempt
+      summary: Submit and lock a complete assessment attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AssessmentAttemptPathId"
+        - $ref: "#/components/parameters/SessionWriteToken"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAssessmentAttemptRequest"
       responses:
-        "200": { description: OK }
-  /learning-sessions/{id}/exploration/complete:
-    post:
-      summary: Request to finish exploration. Backend re-validates can_finish.
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
-      responses:
-        "200": { description: OK — new phase }
-        "409": { description: Requirements not met }
-  /learning-sessions/{id}/result:
+        "200":
+          description: Assessment submitted; pretest advances to exploration, posttest to self-efficacy, and self-efficacy to completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentAttemptResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid session write token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Assessment attempt not found or not owned by the student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Attempt is incomplete, submitted, or invalid for the current session phase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Client supplied score, correctness, or submission state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/heritage-sites:
     get:
-      summary: Final session result summary
-      parameters: [{ in: path, name: id, required: true, schema: { type: string } }]
+      operationId: listHeritageSites
+      summary: List heritage sites
       responses:
-        "200": { description: OK }
+        "200":
+          description: Heritage sites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeritageSiteListResponse"
+  /api/v1/heritage-sites/{slug}:
+    get:
+      operationId: getHeritageSite
+      summary: Get a heritage site
+      parameters:
+        - $ref: "#/components/parameters/HeritageSiteSlug"
+      responses:
+        "200":
+          description: Heritage site
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeritageSiteResponse"
+        "404":
+          description: Heritage site not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/heritage-sites/{slug}/areas:
+    get:
+      operationId: listHeritageSiteAreas
+      summary: List a heritage site's areas and panorama nodes
+      parameters:
+        - $ref: "#/components/parameters/HeritageSiteSlug"
+      responses:
+        "200":
+          description: Heritage areas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeritageAreaListResponse"
+        "404":
+          description: Heritage site not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/panorama-nodes/{id}:
+    get:
+      operationId: getPanoramaNode
+      summary: Get a panorama node and its outgoing navigation links
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Panorama node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PanoramaNodeResponse"
+        "404":
+          description: Panorama node not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/heritage-objects/{id}/learning-material:
+    get:
+      operationId: getHeritageObjectLearningMaterial
+      summary: Get geometry mappings and learning material for a heritage object
+      parameters:
+        - $ref: "#/components/parameters/HeritageObjectId"
+      responses:
+        "200":
+          description: Heritage-object learning material
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearningMaterialResponse"
+        "404":
+          description: Heritage object not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/quizzes/{id}:
+    get:
+      operationId: getMicroQuiz
+      summary: Get a Micro Quiz and its ordered questions
+      parameters:
+        - $ref: "#/components/parameters/QuizId"
+      responses:
+        "200":
+          description: Micro Quiz without answer keys or formative feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MicroQuizResponse"
+        "404":
+          description: Micro Quiz not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  parameters:
+    HeritageSiteSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    LearningSessionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    HeritageObjectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    HeritageObjectPathId:
+      name: objectId
+      in: path
+      required: true
+      schema:
+        type: integer
+    QuizId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    QuizAttemptPathId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        type: integer
+    QuizQuestionPathId:
+      name: questionId
+      in: path
+      required: true
+      schema:
+        type: integer
+    AssessmentAttemptId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    AssessmentAttemptPathId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        type: integer
+    AssessmentItemPathId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: integer
+    SessionWriteToken:
+      name: X-Session-Write-Token
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 64
+        maxLength: 64
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum token
+  schemas:
+    CreateMlPredictionRequest:
+      type: object
+      additionalProperties: false
+      required: [image, panorama_node_id, camera_yaw, camera_pitch, camera_fov]
+      properties:
+        image:
+          type: string
+          format: binary
+          maxLength: 5242880
+          description: JPEG, PNG, or WebP image no larger than 4096 by 4096 pixels
+        panorama_node_id:
+          type: integer
+          minimum: 1
+        camera_yaw:
+          type: number
+          minimum: -180
+          maximum: 180
+        camera_pitch:
+          type: number
+          minimum: -90
+          maximum: 90
+        camera_fov:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 180
+    MlPredictionResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/MlPrediction"
+    MlPrediction:
+      type: object
+      additionalProperties: false
+      required: [model_version, inference_ms, total_latency_ms, detections]
+      properties:
+        model_version:
+          type: string
+        inference_ms:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+        total_latency_ms:
+          type: integer
+          minimum: 0
+        detections:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/MlDetection"
+    MlDetection:
+      type: object
+      additionalProperties: false
+      required: [class, confidence, bounding_box, heritage_object, geometry_mappings]
+      properties:
+        class:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        bounding_box:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: integer
+            minimum: 0
+            maximum: 4096
+        heritage_object:
+          description: The Heritage Object resolved from this detection's class key within the reported model version, or null when the class key is unknown
+          oneOf:
+            - $ref: "#/components/schemas/HeritageObject"
+            - type: "null"
+        geometry_mappings:
+          description: Applicable Heritage Geometry Mapping and Geometry Shape content for the resolved Heritage Object; empty when unresolved
+          type: array
+          items:
+            $ref: "#/components/schemas/GeometryMappingSummary"
+    RecordPanoramaVisitRequest:
+      type: object
+      additionalProperties: false
+      required: [panorama_node_id]
+      properties:
+        panorama_node_id:
+          type: integer
+    RecordMaterialViewRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    StartQuizAttemptRequest:
+      type: object
+      additionalProperties: false
+      required: [quiz_id]
+      properties:
+        quiz_id:
+          type: integer
+    SaveQuizAnswerRequest:
+      type: object
+      additionalProperties: false
+      required: [selected_option_id]
+      properties:
+        selected_option_id:
+          type: integer
+    SubmitQuizAttemptRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    QuizAttemptResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/QuizAttempt"
+    QuizAttempt:
+      type: object
+      additionalProperties: false
+      required: [id, quiz_id, status, score, submitted_at, created_at]
+      properties:
+        id:
+          type: integer
+        quiz_id:
+          type: integer
+        status:
+          type: string
+          enum: [draft, submitted]
+        score:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+        submitted_at:
+          type: [string, "null"]
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    QuizAnswerResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/QuizAnswer"
+    QuizAnswer:
+      type: object
+      additionalProperties: false
+      required: [id, question_id, selected_option_id, is_correct, feedback, answered_at]
+      properties:
+        id:
+          type: integer
+        question_id:
+          type: integer
+        selected_option_id:
+          type: integer
+        is_correct:
+          type: boolean
+        feedback:
+          type: string
+        answered_at:
+          type: string
+          format: date-time
+    ActivityEventResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PanoramaVisitedEvent"
+    PanoramaVisitedEvent:
+      type: object
+      required: [id, type, panorama_node, visited_at]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          const: panorama_visited
+        panorama_node:
+          $ref: "#/components/schemas/PanoramaNodeSummary"
+        visited_at:
+          type: string
+          format: date-time
+    MaterialViewEventResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/MaterialViewedEvent"
+    MaterialViewedEvent:
+      type: object
+      required: [id, type, heritage_object, viewed_at]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          const: material_viewed
+        heritage_object:
+          $ref: "#/components/schemas/HeritageObjectSummary"
+        viewed_at:
+          type: string
+          format: date-time
+    StartAssessmentAttemptRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    SaveAssessmentAnswerRequest:
+      type: object
+      additionalProperties: false
+      required: [selected_option_id]
+      properties:
+        selected_option_id:
+          type: integer
+    SubmitAssessmentAttemptRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    AssessmentAttemptResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AssessmentAttempt"
+    AssessmentAttempt:
+      type: object
+      required: [id, type, title, status, submitted_at, items, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [pretest, posttest, self_efficacy]
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, submitted]
+        submitted_at:
+          type: [string, "null"]
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssessmentItem"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AssessmentItem:
+      type: object
+      required: [id, prompt, position, selected_option_id, options]
+      properties:
+        id:
+          type: integer
+        prompt:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+        selected_option_id:
+          type: [integer, "null"]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssessmentOption"
+    AssessmentOption:
+      type: object
+      required: [id, text, position]
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+    CreateLearningSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [respondent_code]
+      properties:
+        respondent_code:
+          type: string
+          pattern: ^RSP-[A-Z0-9]{6}$
+    ExplorationProgressResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ExplorationProgress"
+    ExplorationProgress:
+      type: object
+      additionalProperties: false
+      required: [panorama_visits, learning_materials, micro_quizzes, completed]
+      properties:
+        panorama_visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequiredPanoramaVisitProgress"
+        learning_materials:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequiredLearningMaterialProgress"
+        micro_quizzes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequiredMicroQuizProgress"
+        completed:
+          type: boolean
+    RequiredPanoramaVisitProgress:
+      type: object
+      additionalProperties: false
+      required: [panorama_node_id, completed]
+      properties:
+        panorama_node_id:
+          type: integer
+        completed:
+          type: boolean
+    RequiredLearningMaterialProgress:
+      type: object
+      additionalProperties: false
+      required: [heritage_object_id, completed]
+      properties:
+        heritage_object_id:
+          type: integer
+        completed:
+          type: boolean
+    RequiredMicroQuizProgress:
+      type: object
+      additionalProperties: false
+      required: [quiz_id, completed]
+      properties:
+        quiz_id:
+          type: integer
+        completed:
+          type: boolean
+    LearningSession:
+      type: object
+      required: [id, respondent_code, phase, current_panorama_node, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        respondent_code:
+          type: string
+          pattern: ^RSP-[A-Z0-9]{6}$
+        phase:
+          type: string
+          enum: [pretest, exploration, posttest, self_efficacy, completed]
+        current_panorama_node:
+          oneOf:
+            - $ref: "#/components/schemas/PanoramaNodeSummary"
+            - type: "null"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    LearningSessionCreated:
+      allOf:
+        - $ref: "#/components/schemas/LearningSession"
+        - type: object
+          required: [write_token]
+          properties:
+            write_token:
+              type: string
+              minLength: 64
+              maxLength: 64
+    LearningSessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/LearningSession"
+    CompletedSessionResultResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/CompletedSessionResult"
+    CompletedSessionResult:
+      type: object
+      required: [id, phase, pretest_score, posttest_score, activity_summary]
+      properties:
+        id:
+          type: integer
+        phase:
+          type: string
+          enum: [completed]
+        pretest_score:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+        posttest_score:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+        activity_summary:
+          type: object
+          required: [panoramas_visited, materials_viewed, micro_quizzes_completed]
+          properties:
+            panoramas_visited:
+              type: integer
+              minimum: 0
+            materials_viewed:
+              type: integer
+              minimum: 0
+            micro_quizzes_completed:
+              type: integer
+              minimum: 0
+    ActiveLearningSessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/LearningSessionCreated"
+            - type: "null"
+    CreateLearningSessionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/LearningSessionCreated"
+    HeritageSiteListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeritageSite"
+    HeritageSiteResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/HeritageSite"
+    HeritageSite:
+      type: object
+      required: [id, name, slug, description, cover_image_url]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, "null"]
+        cover_image_url:
+          type: string
+          format: uri
+    HeritageAreaListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeritageArea"
+    HeritageArea:
+      type: object
+      required: [id, name, slug, description, panorama_nodes]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, "null"]
+        panorama_nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PanoramaNodeSummary"
+    PanoramaNodeSummary:
+      type: object
+      required: [id, name, slug, panorama_url]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        panorama_url:
+          type: string
+          format: uri
+    PanoramaNodeResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/PanoramaNode"
+    PanoramaNode:
+      allOf:
+        - $ref: "#/components/schemas/PanoramaNodeSummary"
+        - type: object
+          required: [area, links, annotations]
+          properties:
+            area:
+              $ref: "#/components/schemas/HeritageAreaReference"
+            links:
+              type: array
+              items:
+                $ref: "#/components/schemas/PanoramaLink"
+            annotations:
+              type: array
+              items:
+                $ref: "#/components/schemas/PanoramaObjectAnnotation"
+    HeritageAreaReference:
+      type: object
+      required: [id, name, slug, heritage_site]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        heritage_site:
+          $ref: "#/components/schemas/HeritageSiteReference"
+    HeritageSiteReference:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+    PanoramaLink:
+      type: object
+      required: [id, label, yaw, pitch, target]
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        yaw:
+          type: number
+        pitch:
+          type: number
+        target:
+          $ref: "#/components/schemas/PanoramaNodeSummary"
+    PanoramaObjectAnnotation:
+      type: object
+      required: [id, heritage_object]
+      properties:
+        id:
+          type: integer
+        heritage_object:
+          $ref: "#/components/schemas/HeritageObjectSummary"
+    HeritageObjectSummary:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+    LearningMaterialResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [heritage_object, geometry_mappings]
+          properties:
+            heritage_object:
+              $ref: "#/components/schemas/HeritageObject"
+            geometry_mappings:
+              type: array
+              items:
+                $ref: "#/components/schemas/HeritageGeometryMapping"
+    HeritageObject:
+      allOf:
+        - $ref: "#/components/schemas/HeritageObjectSummary"
+        - type: object
+          required: [description]
+          properties:
+            description:
+              type: [string, "null"]
+    HeritageGeometryMapping:
+      allOf:
+        - $ref: "#/components/schemas/GeometryMappingSummary"
+        - type: object
+          required: [micro_quiz_id, learning_objectives]
+          properties:
+            micro_quiz_id:
+              type: [integer, "null"]
+            learning_objectives:
+              type: array
+              items:
+                $ref: "#/components/schemas/LearningObjective"
+    GeometryMappingSummary:
+      type: object
+      required: [semantics, geometry_shape]
+      properties:
+        semantics:
+          type: string
+          example: didekati sebagai
+        geometry_shape:
+          $ref: "#/components/schemas/GeometryShape"
+    GeometryShape:
+      type: object
+      required: [id, name, slug, description]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: [string, "null"]
+    LearningObjective:
+      type: object
+      required: [id, title, content, position]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+    MicroQuizResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/MicroQuiz"
+    MicroQuiz:
+      type: object
+      required: [id, title, heritage_geometry_mapping, questions]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        heritage_geometry_mapping:
+          $ref: "#/components/schemas/MicroQuizMapping"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MicroQuizQuestion"
+    MicroQuizMapping:
+      type: object
+      required: [id, semantics, heritage_object, geometry_shape]
+      properties:
+        id:
+          type: integer
+        semantics:
+          type: string
+          example: didekati sebagai
+        heritage_object:
+          $ref: "#/components/schemas/HeritageObjectSummary"
+        geometry_shape:
+          type: object
+          required: [id, name, slug]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            slug:
+              type: string
+    MicroQuizQuestion:
+      type: object
+      required: [id, prompt, position, options]
+      properties:
+        id:
+          type: integer
+        prompt:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/MicroQuizOption"
+    MicroQuizOption:
+      type: object
+      additionalProperties: false
+      required: [id, text, position]
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        position:
+          type: integer
+          minimum: 1
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [token, user]
+          properties:
+            token:
+              type: string
+            user:
+              $ref: "#/components/schemas/AuthenticatedStudent"
+    AuthenticatedStudentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AuthenticatedStudent"
+    AuthenticatedStudent:
+      type: object
+      required: [id, email, respondent_code, student_profile]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        respondent_code:
+          description: The student's research participant code, or null when the student is not enrolled in a study
+          type: [string, "null"]
+          pattern: "^RSP-[A-Z0-9]{6}$"
+        student_profile:
+          oneOf:
+            - $ref: "#/components/schemas/StudentProfile"
+            - type: "null"
+    StudentProfile:
+      type: object
+      required: [id, name, student_number, school, classrooms]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        student_number:
+          type: string
+        school:
+          $ref: "#/components/schemas/School"
+        classrooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Classroom"
+    School:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Classroom:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true

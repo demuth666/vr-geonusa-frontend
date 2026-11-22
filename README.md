@@ -5,8 +5,10 @@ di Candi Borobudur, sesuai PRD V1. **Repo ini HANYA berisi frontend** —
 backend Laravel, service ML (FastAPI), dan admin panel ada di repo terpisah
 milik tim masing-masing.
 
-> **Status integrasi:** frontend V1 selesai dan berjalan di atas mock. Menunggu
-> OpenAPI resmi dari tim backend — daftar kebutuhannya ada di
+> **Status integrasi:** frontend sudah terhubung ke OpenAPI resmi backend
+> (`contracts/openapi.yaml` disalin dari repo `vr-geonusa-backend`). Mode
+> default untuk pengembangan tanpa backend tetap `mock`; set
+> `VITE_API_MODE=real` untuk memakai Laravel. Catatan integrasi ada di
 > [`docs/backend-api-requests.md`](docs/backend-api-requests.md).
 
 ## Mengapa cuma frontend yang di-push ke sini
@@ -47,8 +49,8 @@ npm run dev
 Buka `http://localhost:5173`. Dengan `VITE_API_MODE=mock` (default),
 **seluruh alur bisa dicoba tanpa backend sama sekali** — ada mock API
 in-memory di `src/api/mock/` yang meniru endpoint Laravel sesuai
-`contracts/openapi.yaml`. Login bisa pakai identifier/password apa saja yang
-tidak kosong.
+`contracts/openapi.yaml`. Di mode mock, login bisa pakai email/password apa saja
+yang tidak kosong.
 
 Dataset dev mock (PRD §51): 1 destinasi aktif (Borobudur) + Prambanan
 "Segera Hadir", 1 area, **3 panorama asli** dari dokumentasi tim (RICOH THETA V,
@@ -62,24 +64,35 @@ Untuk konek ke backend sungguhan:
 ```bash
 # di .env.local
 VITE_API_MODE=real
-VITE_API_BASE_URL=http://localhost:8000   # sesuaikan
-VITE_SANCTUM_CSRF=true                     # hanya jika backend pakai Laravel Sanctum SPA
+# Kosongkan untuk memakai Vite dev proxy (/api/v1 -> http://localhost:8000).
+VITE_API_BASE_URL=
 ```
+
+Jalankan backend Laravel di `http://localhost:8000`, lalu `npm run dev`.
+Jika memakai URL absolut, pastikan CORS backend mengizinkan origin frontend
+dan header `Authorization` + `X-Session-Write-Token`.
 
 Catatan mode real:
 
-- Auth via cookie (`credentials: 'include'`). Bila cookie `XSRF-TOKEN` ada,
-  header `X-XSRF-TOKEN` otomatis dikirim pada request non-GET.
+- Auth memakai **Sanctum Bearer token** dari `POST /auth/login`. Token
+  disimpan di `sessionStorage` (per tab, bertahan saat refresh) dan dikirim
+  lewat `Authorization: Bearer ...`.
+- Header write token sesi adalah `X-Session-Write-Token`. Token hanya
+  disimpan di memory; `GET /me/learning-sessions/active` menerbitkan token
+  baru setiap resume sehingga refresh tidak membuat sesi macet.
+- `GET /me` mengembalikan `respondent_code` milik siswa; frontend
+  mengirimkannya otomatis saat `POST /learning-sessions`.
 - Respons Laravel `{ "data": ... }` di-unwrap otomatis (`{ "data": null }` → `null`).
-- Konfirmasi ke backend: Sanctum atau bukan, domain cookie/CORS, dan skala
-  `confidence` ML (0–1 atau 0–100).
+  Error resmi `{ "error": { code, message } }` dipetakan ke `ApiError`.
+- Endpoint ML memakai `multipart/form-data` (bukan JSON base64).
+- Skala `confidence` ML mengikuti kontrak resmi: 0-1.
 
 ## Struktur Proyek
 
 ```
-contracts/openapi.yaml   — kontrak API (provisional, lihat catatan di file itu)
+contracts/openapi.yaml   — kontrak API resmi, disalin dari repo backend
 src/
-  api/                   — HTTP client (mode "real") + mock/ (mode "mock")
+  api/                   — HTTP client (mode "real"), adapter DTO, mock/ (mode "mock")
   app/                   — router, providers (TanStack Query), layout akar
   components/            — komponen UI generik (Button, Spinner, dst)
   features/
@@ -96,7 +109,9 @@ src/
     ml/                    — capture viewport (screenshot + yaw/pitch/fov) untuk ML
   pages/                  — satu file per route
   store/uiStore.ts        — state UI transient (overlay aktif, kamera terakhir)
-  types/api.ts            — tipe data sesuai contracts/openapi.yaml
+  api/backend-types.ts    — DTO backend sesuai contracts/openapi.yaml
+  api/adapters.ts         — pemetaan DTO backend -> view model UI
+  types/api.ts            — view model yang dipakai komponen/hooks
 ```
 
 ## Keputusan desain penting (ikuti PRD)
@@ -109,10 +124,10 @@ src/
   flag lokal. `ProtectedRoute` menyimpan tujuan semula (`location.state.from`)
   supaya setelah login siswa kembali ke halaman yang ingin dituju, bukan ke
   landing page.
-- **Token tulis sesi (`X-Learning-Session-Token`)** disimpan HANYA di memory
+- **Token tulis sesi (`X-Session-Write-Token`)** disimpan HANYA di memory
   (`api/session-token.ts`) — tidak pernah di localStorage/URL/log. Hilang
-  saat refresh secara sengaja; `SessionPhaseGuard` mengambil ulang lewat
-  `GET /me/learning-sessions/active` sebelum halaman sesi melakukan mutasi.
+  saat refresh; `SessionPhaseGuard` meminta `GET /me/learning-sessions/active`
+  yang menerbitkan token baru sebelum halaman sesi melakukan mutasi.
 - **401 di tengah sesi** (`features/auth/AuthExpiryWatcher.tsx`) membuang
   status auth + token dan mengarahkan ke `/login` dengan tujuan semula.
 - **Panorama data-driven:** posisi hotspot dihitung dari `yaw`/`pitch` API.
@@ -132,19 +147,18 @@ src/
 
 ## Perihal `contracts/openapi.yaml`
 
-File ini **ditulis oleh tim frontend sebagai kontrak sementara**, murni
-diturunkan dari bentuk payload yang dideskripsikan di PRD — backend belum
-membagikan OpenAPI resminya saat V1 ini dikerjakan. Begitu backend merilis
-kontrak asli:
+File ini adalah **kontrak resmi dari repo `vr-geonusa-backend`**
+(`contracts/openapi.yaml`), bukan lagi kontrak sementara frontend. Jika backend
+mengubah kontrak:
 
-Daftar pertanyaan & kebutuhan untuk backend: [`docs/backend-api-requests.md`](docs/backend-api-requests.md).
+1. Salin ulang file dari repo backend.
+2. Sesuaikan `src/api/backend-types.ts` dan `src/api/adapters.ts` bila bentuk
+   DTO berubah. Komponen UI tetap memakai view model di `src/types/api.ts`.
+3. Jalankan `npm test` — `api/contract.test.ts` akan gagal bila ada panggilan
+   `http()` frontend yang tidak ada di kontrak.
 
-1. Ganti `contracts/openapi.yaml` dengan versi resmi.
-2. Cocokkan ulang `src/types/api.ts` terhadap skema resmi.
-3. Set `VITE_API_MODE=real` dan uji tiap endpoint satu per satu terhadap
-   `src/api/mock/*` yang sudah ada — mock dibuat 1:1 dengan fungsi di
-   `src/features/*/api.ts` supaya penggantian "mock → real" tidak mengubah
-   satu pun kode di hooks/komponen (lihat PRD, strategi mocking).
+Daftar kebutuhan integrasi awal (sudah diselesaikan) tetap tersimpan di
+[`docs/backend-api-requests.md`](docs/backend-api-requests.md).
 
 ## Testing yang sudah benar-benar dijalankan
 
@@ -152,14 +166,17 @@ Daftar pertanyaan & kebutuhan untuk backend: [`docs/backend-api-requests.md`](do
 - ✅ `npm run lint` — 0 error, 0 warning.
 - ✅ `npm run build` — sukses. `ExplorePage` (memuat A-Frame, ~1.3MB) dipisah
   jadi chunk sendiri via `React.lazy`, supaya landing/login/pretest ringan.
-- ✅ `npm test` — 24 test lulus:
-  - `test/critical-flows.test.tsx` — 12 test kritis PRD §55 + hasil prediksi
+- ✅ `npm test` — 33 test lulus:
+  - `test/critical-flows.test.tsx` — 16 test kritis PRD §55 + hasil prediksi
     ML, pemulihan write token setelah refresh, 401 → login, dan navigasi
     hotspot lewat keyboard. Render route asli dengan mock API; A-Frame diganti
     stub (jsdom tanpa WebGL).
   - `api/contract.test.ts` — setiap `http()` di `src/features/*/api.ts` ada di
     `contracts/openapi.yaml`.
-  - `api/client.test.ts` — unwrap envelope `{ data }`.
+  - `api/adapters.test.ts` — DTO backend -> view model (session, progress, ML,
+    materi, assessment, result).
+  - `api/client.test.ts` — unwrap envelope `{ data }`, header Bearer/write
+    token, multipart FormData, dan error `{ error }`.
   - `vr/panorama/preload.test.ts` — preload hanya node tetangga.
   - `utils/session-routing.test.ts`, `api/mock/learning-session.test.ts`.
 - ✅ Dicek manual di Chrome (desktop 1440px dan simulasi HP 390px / 360px):

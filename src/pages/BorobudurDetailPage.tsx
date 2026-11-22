@@ -3,7 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Spinner from '@/components/Spinner';
 import ErrorState from '@/components/ErrorState';
-import { useHeritageSite } from '@/features/heritage/hooks';
+import { useHeritageAreas, useHeritageSite } from '@/features/heritage/hooks';
 import { CheckIcon, GlobeIcon, LayersIcon, MapPinIcon, PlayIcon, SearchIcon } from '@/components/icons';
 
 /**
@@ -14,6 +14,7 @@ import { CheckIcon, GlobeIcon, LayersIcon, MapPinIcon, PlayIcon, SearchIcon } fr
 export default function BorobudurDetailPage() {
   const { slug = 'borobudur' } = useParams();
   const siteQuery = useHeritageSite(slug);
+  const areasQuery = useHeritageAreas(slug);
 
   if (siteQuery.isLoading) {
     return (
@@ -48,10 +49,12 @@ export default function BorobudurDetailPage() {
                 {available ? 'Foto 360 Aktif' : 'Segera Hadir'}
               </div>
               <h1 className="hero-h1">{site.name}</h1>
-              <div className="section-kicker" style={{ color: 'var(--text-2)', textTransform: 'none', letterSpacing: 0 }}>
-                <MapPinIcon />
-                {site.location}
-              </div>
+              {site.location && (
+                <div className="section-kicker" style={{ color: 'var(--text-2)', textTransform: 'none', letterSpacing: 0 }}>
+                  <MapPinIcon />
+                  {site.location}
+                </div>
+              )}
               <p className="hero-sub" style={{ maxWidth: 560, marginBottom: 0 }}>
                 {site.description}
               </p>
@@ -62,7 +65,9 @@ export default function BorobudurDetailPage() {
                     <SearchIcon />
                   </div>
                   <div>
-                    <span className="hero-stat-num">{site.available_areas_count}</span>
+                    <span className="hero-stat-num">
+                      {areasQuery.data?.length ?? site.available_areas_count}
+                    </span>
                     <span className="hero-stat-lbl">Area Panorama</span>
                   </div>
                 </div>

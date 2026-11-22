@@ -1,42 +1,52 @@
 import { apiBaseUrl } from '@/api/mode';
 import { getSessionWriteToken } from '@/api/session-token';
+import { clearAuthToken, getAuthToken } from '@/api/auth-token';
 import { ApiError } from '@/api/error';
 
 /**
  * HTTP client untuk mode "real". Dipakai hanya ketika VITE_API_MODE=real.
  *
- * - credentials: 'include' -> backend Laravel pakai secure session cookie,
- *   frontend TIDAK menyimpan token auth sendiri (PRD #16, #46).
- * - Header X-Learning-Session-Token disisipkan otomatis bila ada token aktif
- *   di memory (lihat session-token.ts), tanpa pernah disimpan permanen.
+ * Backend Laravel resmi memakai Sanctum Bearer token (lihat OpenAPI), jadi:
+ * - token auth dikirim lewat `Authorization: Bearer ...`,
+ * - write token sesi dikirim lewat `X-Session-Write-Token`,
+ * - request multipart (ML) mengirim FormData tanpa Content-Type manual.
  */
 export async function http<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body?: unknown
 ): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-  const token = getSessionWriteToken();
-  if (token) headers['X-Learning-Session-Token'] = token;
-  // Laravel (Sanctum SPA / cookie session) menolak request mutasi tanpa
-  // header X-XSRF-TOKEN. fetch tidak menyisipkannya otomatis seperti axios,
-  // jadi baca dari cookie XSRF-TOKEN bila backend menyetelnya.
-  const xsrf = readCookie('XSRF-TOKEN');
-  if (xsrf && method !== 'GET') headers['X-XSRF-TOKEN'] = xsrf;
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+
+  const authToken = getAuthToken();
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  const writeToken = getSessionWriteToken();
+  if (writeToken) headers['X-Session-Write-Token'] = writeToken;
 
   let res: Response;
   try {
     res = await fetch(`${apiBaseUrl}/api/v1${path}`, {
       method,
       headers,
-      credentials: 'include',
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? (body as FormData)
+            : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, 'network_error', 'Network request failed');
+  }
+
+  if (res.status === 401) {
+    // Backend is the authority: a rejected token must not linger in the tab.
+    clearAuthToken();
   }
 
   if (res.status === 204) return undefined as T;
@@ -49,8 +59,12 @@ export async function http<T>(
   }
 
   if (!res.ok) {
-    const code = payload?.code ?? `http_${res.status}`;
-    const message = payload?.message ?? res.statusText;
+    // Kontrak resmi membungkus error sebagai `{ error: { code, message } }`.
+    // Dukungan `{ code, message }` lama dipertahankan agar mock/alat lama tetap aman.
+    const errorPayload =
+      payload && typeof payload === 'object' && 'error' in payload ? payload.error : payload;
+    const code = errorPayload?.code ?? `http_${res.status}`;
+    const message = errorPayload?.message ?? res.statusText;
     throw new ApiError(res.status, code, message);
   }
 
@@ -68,23 +82,4 @@ export function unwrapData<T>(payload: unknown): T {
     return (payload as { data: T }).data;
   }
   return payload as T;
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.split('; ').find((c) => c.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
-}
-
-/**
- * Opsional (VITE_SANCTUM_CSRF=true): minta cookie CSRF ke Laravel Sanctum
- * sebelum login. Path di luar /api/v1 sesuai default Sanctum.
- */
-export async function ensureCsrfCookie(): Promise<void> {
-  if (import.meta.env.VITE_SANCTUM_CSRF !== 'true') return;
-  try {
-    await fetch(`${apiBaseUrl}/sanctum/csrf-cookie`, { credentials: 'include' });
-  } catch {
-    throw new ApiError(0, 'network_error', 'Network request failed');
-  }
 }
